@@ -1,5 +1,5 @@
 import {App, PluginSettingTab} from "obsidian";
-import {createRoot} from "react-dom/client";
+import {createRoot, Root} from "react-dom/client";
 import { useState, useRef, useCallback } from "react";
 import VaultSync from "./main";
 import { S3Config } from "./utils/s3";
@@ -114,6 +114,7 @@ const VaultSyncSettingsUI = ({plugin}: {plugin: VaultSync}) => {
 
 export class VaultSyncSettingTab extends PluginSettingTab {
 	plugin: VaultSync;
+	private root: Root | null = null;
 
 	constructor(app: App, plugin: VaultSync) {
 		super(app, plugin);
@@ -121,8 +122,16 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
+		if (!this.root) {
+			this.root = createRoot(this.containerEl);
+		}
+		this.root.render(<VaultSyncSettingsUI plugin={this.plugin} />);
+	}
+
+	hide(): void {
+		this.root?.unmount();
+		this.root = null;
 		this.containerEl.empty();
-		createRoot(this.containerEl).render(<VaultSyncSettingsUI plugin={this.plugin} />);
 	}
 }
 

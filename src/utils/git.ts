@@ -88,7 +88,8 @@ export class Git {
     for (const line of out.split("\n").filter(Boolean)) {
       const index = line[0];
       const worktree = line[1];
-      const filepath = line.slice(3);
+      const raw = line.slice(3);
+      const filepath = raw.startsWith('"') ? raw.slice(1, -1).replace(/\\"/g, '"') : raw;
 
       if (index === "A" || index === "M" || index === "R") result.staged.push(filepath);
       if (worktree === "M") result.modified.push(filepath);

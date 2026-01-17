@@ -225,6 +225,7 @@ export default class VaultSync extends Plugin {
 			return;
 		}
 
+		this.createS3Client();
 		try {
 			this.git = new Git(this.getVaultPath());
 			const hasLocalGit = await this.app.vault.adapter.exists(".git");

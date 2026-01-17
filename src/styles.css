@@ -1,0 +1,46 @@
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
+
+/* File explorer status badges */
+.nav-file-title {
+  overflow: visible;
+}
+
+.nav-file-title .nav-file-title-content {
+  flex: 1;
+}
+
+.remote-vault-sync-badge {
+  margin: 0 2px;
+  font-size: 10px;
+  font-weight: 600;
+  align-self: center;
+}
+
+.remote-vault-sync-badge-M { color: var(--color-yellow-500); }
+.remote-vault-sync-badge-U { color: var(--color-green-500); }
+.remote-vault-sync-badge-A { color: var(--color-green-500); }
+.remote-vault-sync-badge-D { color: var(--color-red-500); }
+
+/* Disabled ribbon icons */
+.remote-vault-sync-ribbon-disabled {
+  opacity: 0.3;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* Merge conflict highlighting */
+.remote-vault-sync-conflict-marker {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.remote-vault-sync-conflict-local {
+  background: rgba(88, 166, 92, 0.08);
+  border-left: 2px solid rgba(88, 166, 92, 0.5);
+}
+
+.remote-vault-sync-conflict-remote {
+  background: rgba(69, 137, 191, 0.08);
+  border-left: 2px solid rgba(69, 137, 191, 0.5);
+}

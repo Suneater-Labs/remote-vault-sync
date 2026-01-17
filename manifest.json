@@ -1,0 +1,10 @@
+{
+	"id": "remote-vault-sync",
+	"name": "Remote Vault Sync",
+	"version": "1.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "Obsidian plugin that syncs your vault to S3 using native git.",
+	"author": "bebeal",
+	"authorUrl": "https://github.com/Suneater-Labs",
+	"isDesktopOnly": true
+}

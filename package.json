@@ -1,0 +1,66 @@
+{
+	"name": "remote-vault-sync",
+	"version": "1.0.0",
+	"description": "Obsidian plugin that syncs your vault to S3 using native git.",
+	"main": "main.js",
+	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Suneater-Labs/remote-vault-sync"
+	},
+	"keywords": [
+		"obsidian",
+		"sync",
+		"s3",
+		"git"
+	],
+	"scripts": {
+		"dev": "node esbuild.config.mjs & postcss ./src/styles.css -o ./styles.css --watch",
+		"build": "tsc -noEmit -skipLibCheck && postcss ./src/styles.css -o ./styles.css && node esbuild.config.mjs production",
+		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"lint": "eslint .",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage"
+	},
+	"license": "0-BSD",
+	"devDependencies": {
+		"@eslint/js": "9.30.1",
+		"@tailwindcss/cli": "^4.1.18",
+		"@tailwindcss/postcss": "^4.1.18",
+		"@types/node": "^20.19.29",
+		"@types/picomatch": "^4.0.2",
+		"@types/react": "^19.2.8",
+		"@types/react-dom": "^19.2.3",
+		"esbuild": "0.25.5",
+		"eslint-plugin-obsidianmd": "0.1.9",
+		"globals": "14.0.0",
+		"jiti": "2.6.1",
+		"postcss": "^8.5.6",
+		"postcss-cli": "^11.0.1",
+		"postcss-prefix-selector": "^2.1.1",
+		"tailwindcss": "^4.1.18",
+		"tslib": "2.4.0",
+		"typescript": "^5.8.3",
+		"typescript-eslint": "8.35.1",
+		"vitest": "^1.6.1"
+	},
+	"dependencies": {
+		"@aws-sdk/client-s3": "^3.962.0",
+		"@aws-sdk/lib-storage": "^3.969.0",
+		"@smithy/fetch-http-handler": "^5.3.8",
+		"@smithy/protocol-http": "^5.3.7",
+		"@smithy/querystring-builder": "^4.2.7",
+		"@smithy/types": "^4.11.0",
+		"@tanstack/react-virtual": "^3.13.18",
+		"@types/pako": "^2.0.4",
+		"dayjs": "^1.11.19",
+		"isomorphic-git": "^1.36.1",
+		"obsidian": "latest",
+		"pako": "^1.0.11",
+		"picomatch": "^4.0.3",
+		"react": "^19.2.3",
+		"react-dom": "^19.2.3",
+		"tinyglobby": "^0.2.15"
+	}
+}

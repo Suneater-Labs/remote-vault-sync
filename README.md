@@ -2,6 +2,17 @@
 
 Back up and sync your vault to S3 with git-based version control.
 
+<table>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/a8db793d-6b09-4d27-a88f-ad8a2d5e0660" alt="Git initialized notification and file badges" /></td>
+    <td><img src="https://github.com/user-attachments/assets/21c70822-483c-4d22-b8fa-084ed82afc87" alt="View changes diff modal" /></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/02e089e9-9e4a-4216-bf66-c176816a335f" alt="Merge modal popup" /></td>
+    <td><img src="https://github.com/user-attachments/assets/14cd5157-ce87-49d1-94b0-beb4a925ab4e" alt="Status bar sync indicator" /></td>
+  </tr>
+</table>
+
 ## How It Works
 
 Uses native git via `child_process`. The `.git` directory is copied to/from S3 directly. Uses LFS to store large files in S3.

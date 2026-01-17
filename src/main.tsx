@@ -269,7 +269,7 @@ export default class VaultSync extends Plugin {
 		const status = await this.git.status();
 		const hasChanges = status.staged.length || status.modified.length ||
 		                   status.untracked.length || status.deleted.length;
-		const localHead = await this.git.rev("HEAD");
+		const localHead = await this.git.rev("HEAD").catch(() => null);
 		const remoteHead = await this.getRemoteHead();
 
 		// Nothing to do if clean and in sync

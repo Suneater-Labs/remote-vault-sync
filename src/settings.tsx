@@ -46,7 +46,7 @@ const VaultSyncSettingsUI = ({plugin}: {plugin: VaultSync}) => {
 	}, [debouncedSave]);
 
 	return (
-		<div className="vault-sync">
+		<div className="remote-vault-sync">
 			<div className="flex w-full gap-1 mb-4">
 				{tabs.map((t) => (
 					<button

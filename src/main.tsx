@@ -114,7 +114,7 @@ export default class VaultSync extends Plugin {
 		this.explorerObserver?.disconnect();
 		this.ribbonButtons?.destroy();
 		this.statusBarRoot?.unmount();
-		document.querySelectorAll(".remote-remote-vault-sync-badge").forEach(el => el.remove());
+		document.querySelectorAll(".remote-vault-sync-badge").forEach(el => el.remove());
 	}
 
 	private mountStatusBar() {
@@ -134,7 +134,7 @@ export default class VaultSync extends Plugin {
 
 	// Render git status badges in file explorer
 	private updateFileDecorations(status: GitStatus) {
-		document.querySelectorAll(".remote-remote-vault-sync-badge").forEach(el => el.remove());
+		document.querySelectorAll(".remote-vault-sync-badge").forEach(el => el.remove());
 
 		// Priority order: U < M < A < D (later entries override earlier)
 		const sources: [string[], string][] = [
@@ -207,7 +207,7 @@ export default class VaultSync extends Plugin {
 		const name = await this.git.getConfig("user.name");
 		const email = await this.git.getConfig("user.email");
 		if (!name) await this.git.setConfig("user.name", "remote-vault-sync");
-		if (!email) await this.git.setConfig("user.email", "remote-remote-vault-sync@local");
+		if (!email) await this.git.setConfig("user.email", "remote-vault-sync@local");
 	}
 
 	// Generate descriptive commit message from status
@@ -252,7 +252,7 @@ export default class VaultSync extends Plugin {
 			await this.ensureGitAttributes();
 			this.refreshStatus();
 		} catch (e) {
-			console.error("[remote-remote-vault-sync] Connect failed:", e);
+			console.error("[remote-vault-sync] Connect failed:", e);
 			new Notice(`Connect failed: ${e instanceof Error ? e.message : String(e)}`);
 			this.updateStatus({ status: "error" });
 		}
@@ -316,7 +316,7 @@ export default class VaultSync extends Plugin {
 			new Notice("Pushed to Remote");
 			this.refreshStatus();
 		} catch (e) {
-			console.error("[remote-remote-vault-sync] Push failed:", e);
+			console.error("[remote-vault-sync] Push failed:", e);
 			new Notice(`Push failed: ${e instanceof Error ? e.message : String(e)}`);
 			this.updateStatus({ status: "error" });
 		} finally {
@@ -344,7 +344,7 @@ export default class VaultSync extends Plugin {
 		this.ribbonButtons?.setLocked(true);
 		try {
 			const vaultPath = this.getVaultPath();
-			const tempDir = path.join(os.tmpdir(), "remote-remote-vault-sync-remote");
+			const tempDir = path.join(os.tmpdir(), "remote-vault-sync-remote");
 
 			// Download S3 .git to temp directory
 			this.updateStatus({ status: "syncing", step: "Fetching from S3..." });
@@ -364,7 +364,7 @@ export default class VaultSync extends Plugin {
 
 			new Notice("Pulled from Remote");
 		} catch (e) {
-			console.error("[remote-remote-vault-sync] Pull failed:", e);
+			console.error("[remote-vault-sync] Pull failed:", e);
 			new Notice(`Pull failed: ${e instanceof Error ? e.message : String(e)}`);
 		} finally {
 			this.ribbonButtons?.setLocked(false);
@@ -409,7 +409,7 @@ export default class VaultSync extends Plugin {
 			new Notice("Restored");
 			this.refreshStatus();
 		} catch (e) {
-			console.error("[remote-remote-vault-sync] Restore failed:", e);
+			console.error("[remote-vault-sync] Restore failed:", e);
 			new Notice(`Restore failed: ${e instanceof Error ? e.message : String(e)}`);
 			this.updateStatus({ status: "error" });
 		} finally {
@@ -434,7 +434,7 @@ export default class VaultSync extends Plugin {
 			new Notice("Committed");
 			this.refreshStatus();
 		} catch (e) {
-			console.error("[remote-remote-vault-sync] Commit failed:", e);
+			console.error("[remote-vault-sync] Commit failed:", e);
 			new Notice(`Commit failed: ${e instanceof Error ? e.message : String(e)}`);
 			this.updateStatus({ status: "error" });
 		}
@@ -463,7 +463,7 @@ export default class VaultSync extends Plugin {
 			modal.onClose = () => root.unmount();
 			modal.open();
 		} catch (e) {
-			console.error("[remote-remote-vault-sync] Log failed:", e);
+			console.error("[remote-vault-sync] Log failed:", e);
 			new Notice(`Failed to get log: ${e instanceof Error ? e.message : String(e)}`);
 		}
 	}
@@ -492,7 +492,7 @@ export default class VaultSync extends Plugin {
 			modal.onClose = () => root.unmount();
 			modal.open();
 		} catch (e) {
-			console.error("[remote-remote-vault-sync] Diff failed:", e);
+			console.error("[remote-vault-sync] Diff failed:", e);
 			new Notice(`Failed to get diff: ${e instanceof Error ? e.message : String(e)}`);
 		}
 	}
@@ -583,7 +583,7 @@ export default class VaultSync extends Plugin {
 		if (!this.git || !this.s3fs) return;
 
 		const preHead = await this.git.rev("HEAD");
-		const tempDir = path.join(os.tmpdir(), "remote-remote-vault-sync-remote");
+		const tempDir = path.join(os.tmpdir(), "remote-vault-sync-remote");
 
 		// Download remote .git to temp directory
 		this.updateStatus({ status: "syncing", step: "Fetching remote..." });
@@ -693,7 +693,7 @@ export default class VaultSync extends Plugin {
 			new Notice("Pushed to Remote");
 			this.refreshStatus();
 		} catch (e) {
-			console.error("[remote-remote-vault-sync] Resolve failed:", e);
+			console.error("[remote-vault-sync] Resolve failed:", e);
 			new Notice(`Resolve failed: ${e instanceof Error ? e.message : String(e)}`);
 			this.updateStatus({ status: "error" });
 		}
@@ -719,7 +719,7 @@ export default class VaultSync extends Plugin {
 			new Notice("Merge cancelled");
 			this.updateStatus({ status: "changes" });
 		} catch (e) {
-			console.error("[remote-remote-vault-sync] Cancel merge failed:", e);
+			console.error("[remote-vault-sync] Cancel merge failed:", e);
 			new Notice(`Cancel failed: ${e instanceof Error ? e.message : String(e)}`);
 			this.updateStatus({ status: "error" });
 		}

@@ -1,6 +1,6 @@
 # Remote Vault Sync
 
-Obsidian plugin that syncs your vault to S3 using native git.
+Back up and sync your vault to S3 with git-based version control.
 
 ## How It Works
 

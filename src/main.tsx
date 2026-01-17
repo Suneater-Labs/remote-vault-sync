@@ -75,6 +75,7 @@ export default class VaultSync extends Plugin {
 	}
 
 	private async _refreshStatus() {
+		if (this.locked) return;
 		if (!this.isConfigured()) {
 			this.updateStatus({ status: "disconnected" });
 			return;

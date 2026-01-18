@@ -197,11 +197,11 @@ export default class VaultSync extends Plugin {
 		if (!this.git) return;
 		this.lfsAvailable = await isLfsAvailable(this.getVaultPath());
 		if (this.lfsAvailable) {
-			console.log("[remote-vault-sync] git-lfs available, configuring...");
+			console.debug("[remote-vault-sync] git-lfs available, configuring...");
 			await installLfs(this.getVaultPath());
 			await configureLfs(this.git);
 		} else {
-			console.log("[remote-vault-sync] git-lfs not installed, using binary fallback");
+			console.debug("[remote-vault-sync] git-lfs not installed, using binary fallback");
 		}
 	}
 
@@ -230,7 +230,7 @@ export default class VaultSync extends Plugin {
 		}
 
 		// Close settings panel
-		(this.app as any).setting?.close();
+		(this.app as unknown as {setting?: {close: () => void}}).setting?.close();
 
 		this.createS3Client();
 		try {
@@ -531,7 +531,7 @@ export default class VaultSync extends Plugin {
 		let uploaded = 0;
 		for (const file of files) {
 			// Skip files that already exist in S3
-			if (await this.s3fs!.exists(file.s3Key)) {
+			if (await this.s3fs.exists(file.s3Key)) {
 				uploaded += file.size;
 				if (onProgress && totalSize > 0) onProgress(Math.round(uploaded / totalSize * 100));
 				continue;
@@ -540,7 +540,7 @@ export default class VaultSync extends Plugin {
 			const fileProgress = onProgress && totalSize > 0
 				? (percent: number) => onProgress(Math.round((uploaded + file.size * percent / 100) / totalSize * 100))
 				: undefined;
-			await this.s3fs!.writeFile(file.s3Key, content, fileProgress, file.size);
+			await this.s3fs.writeFile(file.s3Key, content, fileProgress, file.size);
 			uploaded += file.size;
 			if (onProgress && totalSize > 0) onProgress(Math.round(uploaded / totalSize * 100));
 		}

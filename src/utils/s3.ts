@@ -17,6 +17,9 @@ import { Upload } from "@aws-sdk/lib-storage";
 import { Readable } from "stream";
 import { paginate, batch } from "./paginate";
 
+const UPLOAD_CHUNK_SIZE = 32 * 1024 * 1024;  // 32 MB
+const UPLOAD_CONCURRENCY = 4;
+
 export interface S3Config {
   accessKeyId: string;
   secretAccessKey: string;
@@ -55,8 +58,8 @@ export class S3 {
       const upload = new Upload({
         client: this.client,
         params: { Bucket: this.bucket, Key: key, Body: data, ContentLength: size },
-        partSize: 16 * 1024 * 1024,
-        queueSize: 1,
+        partSize: UPLOAD_CHUNK_SIZE,
+        queueSize: UPLOAD_CONCURRENCY,
       });
       if (onProgress && size) {
         upload.on("httpUploadProgress", (p) => {

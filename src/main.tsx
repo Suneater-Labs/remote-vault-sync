@@ -248,6 +248,9 @@ export default class VaultSync extends Plugin {
 				await this.app.vault.adapter.write(".gitignore", gitignore);
 				new Notice("Initialized git repo");
 			} else {
+				// Existing local git - still smudge LFS files in case they're pointers
+				const patterns = await getLfsPatterns(this.getVaultPath());
+				await this.s3lfs!.smudgeFiles(this.getVaultPath(), patterns);
 				new Notice("Connected");
 			}
 
@@ -290,13 +293,15 @@ export default class VaultSync extends Plugin {
 				const lfsFiles = [...status.untracked, ...status.modified].filter(f => match(f));
 				for (const file of lfsFiles) {
 					this.updateStatus({ status: "syncing", step: `Uploading ${file} (0%)` });
-					await this.s3lfs.clean(path.join(this.getVaultPath(), file), (pct) => {
+					await this.s3lfs.clean(path.join(this.getVaultPath(), file), this.getVaultPath(), (pct) => {
 						this.updateStatus({ status: "syncing", step: `Uploading ${file} (${pct}%)` });
 					});
 				}
 				this.updateStatus({ status: "syncing", step: "Committing..." });
 				await this.git.addAll();
 				await this.git.commit(this.generateCommitMessage(status));
+				// Restore LFS files from cache
+				await this.s3lfs.smudgeFiles(this.getVaultPath(), patterns);
 			}
 
 			// Re-check HEAD after potential commit
@@ -433,6 +438,8 @@ export default class VaultSync extends Plugin {
 			this.updateStatus({ status: "syncing", step: "Committing..." });
 			await this.git.addAll();
 			await this.git.commit(message);
+			// Restore LFS files from cache
+			await this.s3lfs.smudgeFiles(this.getVaultPath(), patterns);
 			new Notice("Committed");
 			this.refreshStatus();
 		} catch (e) {

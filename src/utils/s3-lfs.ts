@@ -8,6 +8,9 @@ import { Transform } from "stream";
 import { glob } from "tinyglobby";
 import { S3 } from "./s3";
 
+const STREAM_HIGH_WATER_MARK = 64 * 1024;  // 64 KB
+const LFS_CACHE_DIR = ".vault-sync/lfs-cache";
+
 const LFS_VERSION = "https://git-lfs.github.com/spec/v1";
 
 export const DEFAULT_GITATTRIBUTES = `*.png binary
@@ -59,8 +62,12 @@ export class S3LFS {
     return `lfs/${oid}`;
   }
 
-  // Clean: upload file to S3, replace with pointer (single-pass: hash while uploading)
-  async clean(fullPath: string, onProgress?: (percent: number) => void): Promise<void> {
+  private cachePath(vaultPath: string, oid: string): string {
+    return path.join(vaultPath, LFS_CACHE_DIR, oid);
+  }
+
+  // Clean: upload file to S3, cache original locally, replace with pointer
+  async clean(fullPath: string, vaultPath: string, onProgress?: (percent: number) => void): Promise<void> {
     const stat = await fs.stat(fullPath);
     const tempKey = `lfs/tmp/${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -73,7 +80,7 @@ export class S3LFS {
       }
     });
 
-    const stream = createReadStream(fullPath, { highWaterMark: 16 * 1024 * 1024 }).pipe(hashTransform);
+    const stream = createReadStream(fullPath, { highWaterMark: STREAM_HIGH_WATER_MARK }).pipe(hashTransform);
     await this.s3.put(tempKey, stream, onProgress, stat.size);
 
     const oid = hash.digest("hex");
@@ -81,17 +88,27 @@ export class S3LFS {
     // Server-side copy to final key
     await this.s3.copy(tempKey, this.key(oid), stat.size);
     await this.s3.delete(tempKey);
+
+    // Cache original locally before replacing with pointer
+    const cacheFile = this.cachePath(vaultPath, oid);
+    await fs.mkdir(path.dirname(cacheFile), { recursive: true });
+    await fs.rename(fullPath, cacheFile);
     await fs.writeFile(fullPath, formatPointer(oid, stat.size));
   }
 
-  // Smudge: download from S3, replace pointer with content
-  async smudge(fullPath: string): Promise<void> {
+  // Smudge: restore from cache if available, else download from S3
+  async smudge(fullPath: string, vaultPath: string): Promise<void> {
     const content = await fs.readFile(fullPath, "utf8");
     const pointer = parsePointer(content);
     if (!pointer) return;
 
-    const stream = await this.s3.getStream(this.key(pointer.oid));
-    await pipeline(stream, createWriteStream(fullPath));
+    const cacheFile = this.cachePath(vaultPath, pointer.oid);
+    try {
+      await fs.rename(cacheFile, fullPath);
+    } catch {
+      const stream = await this.s3.getStream(this.key(pointer.oid));
+      await pipeline(stream, createWriteStream(fullPath));
+    }
   }
 
   private async isLfsPointer(filePath: string): Promise<boolean> {
@@ -108,7 +125,7 @@ export class S3LFS {
     for (const file of files) {
       const fullPath = path.join(vaultPath, file);
       if (await this.isLfsPointer(fullPath)) continue;
-      await this.clean(fullPath, (percent) => onProgress?.(file, percent));
+      await this.clean(fullPath, vaultPath, (percent) => onProgress?.(file, percent));
     }
   }
 
@@ -116,7 +133,7 @@ export class S3LFS {
   async smudgeFiles(vaultPath: string, patterns: string[]): Promise<void> {
     const files = (await Promise.all(patterns.map(p => glob(p, { cwd: vaultPath, onlyFiles: true })))).flat();
     for (const file of files) {
-      await this.smudge(path.join(vaultPath, file));
+      await this.smudge(path.join(vaultPath, file), vaultPath);
     }
   }
 }

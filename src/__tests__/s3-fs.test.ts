@@ -41,13 +41,20 @@ describe("S3FS", () => {
       mockS3.put.mockResolvedValueOnce(undefined);
       const content = Buffer.from("test");
       await s3fs.writeFile("file.txt", content);
-      expect(mockS3.put).toHaveBeenCalledWith("prefix/file.txt", content);
+      expect(mockS3.put).toHaveBeenCalledWith("prefix/file.txt", content, undefined, undefined);
     });
 
     it("writes string", async () => {
       mockS3.put.mockResolvedValueOnce(undefined);
       await s3fs.writeFile("file.txt", "string");
-      expect(mockS3.put).toHaveBeenCalledWith("prefix/file.txt", "string");
+      expect(mockS3.put).toHaveBeenCalledWith("prefix/file.txt", "string", undefined, undefined);
+    });
+
+    it("passes onProgress and size to s3.put", async () => {
+      mockS3.put.mockResolvedValueOnce(undefined);
+      const onProgress = vi.fn();
+      await s3fs.writeFile("file.txt", "data", onProgress, 100);
+      expect(mockS3.put).toHaveBeenCalledWith("prefix/file.txt", "data", onProgress, 100);
     });
   });
 

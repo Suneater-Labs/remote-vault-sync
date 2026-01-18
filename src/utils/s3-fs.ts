@@ -37,8 +37,8 @@ export class S3FS {
     return this.s3.get(this.key(path));
   }
 
-  async writeFile(path: string, data: Buffer | string): Promise<void> {
-    await this.s3.put(this.key(path), data);
+  async writeFile(path: string, data: Buffer | string, onProgress?: (percent: number) => void, size?: number): Promise<void> {
+    await this.s3.put(this.key(path), data, onProgress, size);
   }
 
   async unlink(path: string): Promise<void> {

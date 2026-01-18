@@ -5,7 +5,6 @@ import {spawn} from "child_process";
 import * as fs from "fs/promises";
 import * as path from "path";
 import * as os from "os";
-import picomatch from "picomatch";
 import {DEFAULT_SETTINGS, VaultSyncSettings, VaultSyncSettingTab} from "./settings";
 import {StatusBar, StatusBarProps} from "./ui/StatusBar";
 import {RibbonButtons} from "./ui/RibbonButtons";
@@ -15,7 +14,7 @@ import {MergeModal, Resolution} from "./ui/MergeModal";
 import {Git, GitStatus} from "./utils/git";
 import {S3} from "./utils/s3";
 import {S3FS} from "./utils/s3-fs";
-import {S3LFS, DEFAULT_GITATTRIBUTES, getLfsPatterns} from "./utils/s3-lfs";
+import {getGitattributes, isLfsAvailable, installLfs, configureLfs, checkoutLfs, pruneLfs, getLfsOids} from "./utils/lfs";
 import {createCommands} from "./commands";
 
 // Run arbitrary git command (for commands not wrapped by Git class)
@@ -40,9 +39,9 @@ export default class VaultSync extends Plugin {
 	private statusBarState: StatusBarProps = { status: "disconnected" };
 	private git: Git | null = null;
 	private s3fs: S3FS | null = null;
-	private s3lfs: S3LFS | null = null;
 	private pendingMerge: { preHead: string; modal: Modal } | null = null;
 	private locked = false;
+	private lfsAvailable = false;
 	private explorerObserver: MutationObserver | null = null;
 	private ribbonButtons: RibbonButtons | null = null;
 
@@ -192,14 +191,18 @@ export default class VaultSync extends Plugin {
 	private createS3Client() {
 		const s3 = new S3(this.settings.s3);
 		this.s3fs = new S3FS(s3);
-		this.s3lfs = new S3LFS(s3);
 	}
 
 	private async configureGit() {
 		if (!this.git) return;
-		await this.git.setConfig("filter.lfs.clean", "cat");
-		await this.git.setConfig("filter.lfs.smudge", "cat");
-		await this.git.setConfig("filter.lfs.required", "false");
+		this.lfsAvailable = await isLfsAvailable(this.getVaultPath());
+		if (this.lfsAvailable) {
+			console.log("[remote-vault-sync] git-lfs available, configuring...");
+			await installLfs(this.getVaultPath());
+			await configureLfs(this.git);
+		} else {
+			console.log("[remote-vault-sync] git-lfs not installed, using binary fallback");
+		}
 	}
 
 	// Set default user identity if not configured
@@ -226,6 +229,9 @@ export default class VaultSync extends Plugin {
 			return;
 		}
 
+		// Close settings panel
+		(this.app as any).setting?.close();
+
 		this.createS3Client();
 		try {
 			this.git = new Git(this.getVaultPath());
@@ -234,11 +240,13 @@ export default class VaultSync extends Plugin {
 
 			if (!hasLocalGit && hasRemoteGit) {
 				this.updateStatus({ status: "syncing", step: "Pulling from Remote..." });
-				await this.copyDirFromS3(".git");
+				await this.copyDirFromS3(".git", true); // skip lfs/objects
 				await this.configureGit();
 				await this.git.checkout(".");
-				const patterns = await getLfsPatterns(this.getVaultPath());
-				await this.s3lfs!.smudgeFiles(this.getVaultPath(), patterns);
+				if (this.lfsAvailable) {
+					await this.fetchNeededLfsObjects(); // download only needed LFS
+					await checkoutLfs(this.getVaultPath());
+				}
 				new Notice("Pulled from Remote");
 			} else if (!hasLocalGit) {
 				this.updateStatus({ status: "syncing", step: "Initializing..." });
@@ -246,12 +254,10 @@ export default class VaultSync extends Plugin {
 				await this.configureGit();
 				const gitignore = `**/.DS_Store\n${this.app.vault.configDir}/**\n.trash/**\n`;
 				await this.app.vault.adapter.write(".gitignore", gitignore);
-				new Notice("Initialized git repo");
+				new Notice("Initializing...");
 			} else {
-				// Existing local git - still smudge LFS files in case they're pointers
-				const patterns = await getLfsPatterns(this.getVaultPath());
-				await this.s3lfs!.smudgeFiles(this.getVaultPath(), patterns);
-				new Notice("Connected");
+				await this.configureGit();
+				new Notice("Connecting...");
 			}
 
 			await this.ensureGitAttributes();
@@ -265,7 +271,7 @@ export default class VaultSync extends Plugin {
 
 	async push() {
 		if (this.locked) return;
-		if (!this.s3fs || !this.git || !this.s3lfs) {
+		if (!this.s3fs || !this.git) {
 			new Notice("Not connected");
 			return;
 		}
@@ -287,21 +293,9 @@ export default class VaultSync extends Plugin {
 		try {
 			// Only commit if there are changes
 			if (hasChanges) {
-				this.updateStatus({ status: "syncing", step: "Syncing..." });
-				const patterns = await getLfsPatterns(this.getVaultPath());
-				const match = picomatch(patterns);
-				const lfsFiles = [...status.untracked, ...status.modified].filter(f => match(f));
-				for (const file of lfsFiles) {
-					this.updateStatus({ status: "syncing", step: `Uploading ${file} (0%)` });
-					await this.s3lfs.clean(path.join(this.getVaultPath(), file), this.getVaultPath(), (pct) => {
-						this.updateStatus({ status: "syncing", step: `Uploading ${file} (${pct}%)` });
-					});
-				}
 				this.updateStatus({ status: "syncing", step: "Committing..." });
 				await this.git.addAll();
 				await this.git.commit(this.generateCommitMessage(status));
-				// Restore LFS files from cache
-				await this.s3lfs.smudgeFiles(this.getVaultPath(), patterns);
 			}
 
 			// Re-check HEAD after potential commit
@@ -318,8 +312,11 @@ export default class VaultSync extends Plugin {
 				}
 			}
 
+			// Prune unreferenced LFS objects before push
+			if (this.lfsAvailable) await pruneLfs(this.getVaultPath());
+
 			this.updateStatus({ status: "syncing", step: "Pushing .git..." });
-			await this.copyDirToS3(".git");
+			await this.copyDirToS3(".git", (pct) => this.updateStatus({ status: "syncing", step: `Pushing .git... ${pct}%` }));
 			new Notice("Pushed to Remote");
 			this.refreshStatus();
 		} catch (e) {
@@ -334,7 +331,7 @@ export default class VaultSync extends Plugin {
 
 	async pull() {
 		if (this.locked) return;
-		if (!this.git || !this.s3fs || !this.s3lfs) {
+		if (!this.git || !this.s3fs) {
 			new Notice("Not connected");
 			return;
 		}
@@ -353,21 +350,22 @@ export default class VaultSync extends Plugin {
 			const vaultPath = this.getVaultPath();
 			const tempDir = path.join(os.tmpdir(), "remote-vault-sync-remote");
 
-			// Download S3 .git to temp directory
+			// Download S3 .git to temp directory (skip lfs/objects)
 			this.updateStatus({ status: "syncing", step: "Fetching from S3..." });
 			await fs.rm(tempDir, { recursive: true, force: true });
 			await fs.mkdir(tempDir, { recursive: true });
-			await this.copyDirFromS3ToPath(".git", path.join(tempDir, ".git"));
+			await this.copyDirFromS3ToPath(".git", path.join(tempDir, ".git"), true);
 
 			// Fetch and merge
 			this.updateStatus({ status: "syncing", step: "Merging..." });
 			await gitExec(vaultPath, ["fetch", tempDir, "main"]);
 			await fs.rm(tempDir, { recursive: true, force: true });
-			await gitExec(vaultPath, ["merge", "FETCH_HEAD", "-m", "merge remote"]);
 
-			// Restore LFS files
-			const patterns = await getLfsPatterns(vaultPath);
-			await this.s3lfs.smudgeFiles(vaultPath, patterns);
+			await gitExec(vaultPath, ["merge", "FETCH_HEAD", "-m", "merge remote"]);
+			if (this.lfsAvailable) {
+				await this.fetchNeededLfsObjects();
+				await checkoutLfs(vaultPath);
+			}
 
 			new Notice("Pulled from Remote");
 		} catch (e) {
@@ -381,7 +379,7 @@ export default class VaultSync extends Plugin {
 
 	async restore() {
 		if (this.locked) return;
-		if (!this.git || !this.s3lfs) {
+		if (!this.git) {
 			new Notice("Not connected");
 			return;
 		}
@@ -411,8 +409,6 @@ export default class VaultSync extends Plugin {
 		try {
 			this.updateStatus({ status: "syncing", step: "Restoring..." });
 			await gitExec(this.getVaultPath(), ["restore", "."]);
-			const patterns = await getLfsPatterns(this.getVaultPath());
-			await this.s3lfs.smudgeFiles(this.getVaultPath(), patterns);
 			new Notice("Restored");
 			this.refreshStatus();
 		} catch (e) {
@@ -426,20 +422,15 @@ export default class VaultSync extends Plugin {
 	}
 
 	async commit(message: string) {
-		if (!this.git || !this.s3lfs) {
+		if (!this.git) {
 			new Notice("Not connected");
 			return;
 		}
 
 		try {
-			this.updateStatus({ status: "syncing", step: "Processing LFS..." });
-			const patterns = await getLfsPatterns(this.getVaultPath());
-			await this.s3lfs.cleanFiles(this.getVaultPath(), patterns);
 			this.updateStatus({ status: "syncing", step: "Committing..." });
 			await this.git.addAll();
 			await this.git.commit(message);
-			// Restore LFS files from cache
-			await this.s3lfs.smudgeFiles(this.getVaultPath(), patterns);
 			new Notice("Committed");
 			this.refreshStatus();
 		} catch (e) {
@@ -508,31 +499,54 @@ export default class VaultSync extends Plugin {
 
 	private async ensureGitAttributes() {
 		if (await this.app.vault.adapter.exists(".gitattributes")) return;
-		await this.app.vault.adapter.write(".gitattributes", DEFAULT_GITATTRIBUTES);
+		await this.app.vault.adapter.write(".gitattributes", getGitattributes(this.lfsAvailable));
 	}
 
-	private async copyDirToS3(dir: string) {
+	private async copyDirToS3(dir: string, onProgress?: (percent: number) => void) {
 		if (!this.s3fs) return;
 		const vaultPath = this.getVaultPath();
 
-		const walk = async (localDir: string, s3Prefix: string) => {
+		// Collect all files and total size
+		const files: { localPath: string; s3Key: string; size: number }[] = [];
+		let totalSize = 0;
+
+		const collectFiles = async (localDir: string, s3Prefix: string) => {
 			const entries = await fs.readdir(path.join(vaultPath, localDir), { withFileTypes: true });
 			for (const entry of entries) {
 				const localPath = path.join(localDir, entry.name);
 				const s3Key = `${s3Prefix}/${entry.name}`;
 				if (entry.isDirectory()) {
-					await walk(localPath, s3Key);
+					await collectFiles(localPath, s3Key);
 				} else {
-					const content = await fs.readFile(path.join(vaultPath, localPath));
-					await this.s3fs!.writeFile(s3Key, content);
+					const stat = await fs.stat(path.join(vaultPath, localPath));
+					files.push({ localPath, s3Key, size: stat.size });
+					totalSize += stat.size;
 				}
 			}
 		};
 
-		await walk(dir, dir);
+		await collectFiles(dir, dir);
+
+		// Upload with progress tracking, skip existing files
+		let uploaded = 0;
+		for (const file of files) {
+			// Skip files that already exist in S3
+			if (await this.s3fs!.exists(file.s3Key)) {
+				uploaded += file.size;
+				if (onProgress && totalSize > 0) onProgress(Math.round(uploaded / totalSize * 100));
+				continue;
+			}
+			const content = await fs.readFile(path.join(vaultPath, file.localPath));
+			const fileProgress = onProgress && totalSize > 0
+				? (percent: number) => onProgress(Math.round((uploaded + file.size * percent / 100) / totalSize * 100))
+				: undefined;
+			await this.s3fs!.writeFile(file.s3Key, content, fileProgress, file.size);
+			uploaded += file.size;
+			if (onProgress && totalSize > 0) onProgress(Math.round(uploaded / totalSize * 100));
+		}
 	}
 
-	private async copyDirFromS3(dir: string) {
+	private async copyDirFromS3(dir: string, skipLfsObjects = false) {
 		if (!this.s3fs) return;
 		const vaultPath = this.getVaultPath();
 
@@ -541,8 +555,11 @@ export default class VaultSync extends Plugin {
 			const s3Key = `${dir}/${entry.name}`;
 			const localPath = path.join(vaultPath, s3Key);
 
+			// Skip lfs/objects directory if requested
+			if (skipLfsObjects && s3Key.includes(".git/lfs/objects")) continue;
+
 			if (entry.isDirectory) {
-				await this.copyDirFromS3(s3Key);
+				await this.copyDirFromS3(s3Key, skipLfsObjects);
 			} else {
 				const content = await this.s3fs.readFile(s3Key);
 				await fs.mkdir(path.dirname(localPath), { recursive: true });
@@ -552,7 +569,7 @@ export default class VaultSync extends Plugin {
 	}
 
 	// Copy S3 directory to arbitrary local path (not vault-relative)
-	private async copyDirFromS3ToPath(s3Dir: string, localDir: string) {
+	private async copyDirFromS3ToPath(s3Dir: string, localDir: string, skipLfsObjects = false) {
 		if (!this.s3fs) return;
 
 		const entries = await this.s3fs.readdir(s3Dir);
@@ -560,9 +577,36 @@ export default class VaultSync extends Plugin {
 			const s3Key = `${s3Dir}/${entry.name}`;
 			const localPath = path.join(localDir, entry.name);
 
+			// Skip lfs/objects directory if requested
+			if (skipLfsObjects && s3Key.includes(".git/lfs/objects")) continue;
+
 			if (entry.isDirectory) {
-				await this.copyDirFromS3ToPath(s3Key, localPath);
+				await this.copyDirFromS3ToPath(s3Key, localPath, skipLfsObjects);
 			} else {
+				const content = await this.s3fs.readFile(s3Key);
+				await fs.mkdir(path.dirname(localPath), { recursive: true });
+				await fs.writeFile(localPath, content);
+			}
+		}
+	}
+
+	// Fetch only the LFS objects needed for current HEAD
+	private async fetchNeededLfsObjects() {
+		if (!this.s3fs || !this.lfsAvailable) return;
+		const vaultPath = this.getVaultPath();
+
+		const oids = await getLfsOids(vaultPath);
+		for (const oid of oids) {
+			// OID path: .git/lfs/objects/AB/CD/ABCD...
+			const s3Key = `.git/lfs/objects/${oid.slice(0, 2)}/${oid.slice(2, 4)}/${oid}`;
+			const localPath = path.join(vaultPath, s3Key);
+
+			// Skip if already exists locally
+			const exists = await fs.access(localPath).then(() => true).catch(() => false);
+			if (exists) continue;
+
+			// Download from S3
+			if (await this.s3fs.exists(s3Key)) {
 				const content = await this.s3fs.readFile(s3Key);
 				await fs.mkdir(path.dirname(localPath), { recursive: true });
 				await fs.writeFile(localPath, content);
@@ -594,11 +638,11 @@ export default class VaultSync extends Plugin {
 		const preHead = await this.git.rev("HEAD");
 		const tempDir = path.join(os.tmpdir(), "remote-vault-sync-remote");
 
-		// Download remote .git to temp directory
+		// Download remote .git to temp directory (skip lfs/objects)
 		this.updateStatus({ status: "syncing", step: "Fetching remote..." });
 		await fs.rm(tempDir, { recursive: true, force: true });
 		await fs.mkdir(tempDir, { recursive: true });
-		await this.copyDirFromS3ToPath(".git", path.join(tempDir, ".git"));
+		await this.copyDirFromS3ToPath(".git", path.join(tempDir, ".git"), true);
 
 		// Fetch remote commits into local repo
 		const vaultPath = this.getVaultPath();
@@ -609,6 +653,10 @@ export default class VaultSync extends Plugin {
 		this.updateStatus({ status: "syncing", step: "Merging..." });
 		try {
 			await gitExec(vaultPath, ["merge", "FETCH_HEAD", "-m", "merge remote"]);
+			if (this.lfsAvailable) {
+				await this.fetchNeededLfsObjects();
+				await checkoutLfs(vaultPath);
+			}
 		} catch (e) {
 			// Check for conflicts
 			const out = await gitExec(vaultPath, ["diff", "--name-only", "--diff-filter=U"]);
@@ -664,7 +712,7 @@ export default class VaultSync extends Plugin {
 
 	// Apply merge resolutions and complete merge
 	private async resolveMerge(resolutions: Record<string, Resolution>, conflicts: string[]) {
-		if (!this.git || !this.s3lfs) return;
+		if (!this.git) return;
 
 		try {
 			this.updateStatus({ status: "syncing", step: "Applying resolutions..." });
@@ -692,13 +740,10 @@ export default class VaultSync extends Plugin {
 			this.pendingMerge = null;
 			modalToClose?.close();
 
-			// Restore LFS files after merge
-			const patterns = await getLfsPatterns(this.getVaultPath());
-			await this.s3lfs.smudgeFiles(this.getVaultPath(), patterns);
-
 			// Continue with push
+			if (this.lfsAvailable) await pruneLfs(this.getVaultPath());
 			this.updateStatus({ status: "syncing", step: "Pushing .git..." });
-			await this.copyDirToS3(".git");
+			await this.copyDirToS3(".git", (pct) => this.updateStatus({ status: "syncing", step: `Pushing .git... ${pct}%` }));
 			new Notice("Pushed to Remote");
 			this.refreshStatus();
 		} catch (e) {
@@ -710,7 +755,7 @@ export default class VaultSync extends Plugin {
 
 	// Cancel merge and restore pre-merge state
 	private async cancelMerge(preHead: string) {
-		if (!this.git || !this.s3lfs || !this.pendingMerge) return;
+		if (!this.git || !this.pendingMerge) return;
 
 		// Clear first to prevent re-entry from onClose
 		this.pendingMerge = null;
@@ -720,10 +765,6 @@ export default class VaultSync extends Plugin {
 			const vaultPath = this.getVaultPath();
 			await gitExec(vaultPath, ["merge", "--abort"]);
 			await this.git.resetHard(preHead);
-
-			// Restore LFS files
-			const patterns = await getLfsPatterns(this.getVaultPath());
-			await this.s3lfs.smudgeFiles(this.getVaultPath(), patterns);
 
 			new Notice("Merge cancelled");
 			this.updateStatus({ status: "changes" });

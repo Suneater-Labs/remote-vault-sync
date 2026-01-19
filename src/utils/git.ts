@@ -28,10 +28,16 @@ export interface Commit {
   gpgsig?: string;
 }
 
+// Escape string for shell (wrap in single quotes, escape existing single quotes)
+function shellEscape(s: string): string {
+  return `'${s.replace(/'/g, "'\\''")}'`;
+}
+
 // Execute a git command and return stdout
 async function exec(cwd: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    const proc = spawn("git", args, { cwd });
+    const escaped = args.map(shellEscape);
+    const proc = spawn("git", escaped, { cwd, shell: true });
     let stdout = "";
     let stderr = "";
 

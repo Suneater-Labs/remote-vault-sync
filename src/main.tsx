@@ -14,7 +14,7 @@ import {MergeModal, Resolution} from "./ui/MergeModal";
 import {Git, GitStatus} from "./utils/git";
 import {S3} from "./utils/s3";
 import {S3FS} from "./utils/s3-fs";
-import {getGitattributes, isLfsAvailable, installLfs, configureLfs, checkoutLfs, pruneLfs, getLfsOids} from "./utils/lfs";
+import {getGitattributes, isLfsAvailable, configureLfs, checkoutLfs, pruneLfs, getLfsOids} from "./utils/lfs";
 import {createCommands} from "./commands";
 
 // Run arbitrary git command (for commands not wrapped by Git class)
@@ -198,7 +198,6 @@ export default class VaultSync extends Plugin {
 		this.lfsAvailable = await isLfsAvailable(this.getVaultPath());
 		if (this.lfsAvailable) {
 			console.debug("[remote-vault-sync] git-lfs available, configuring...");
-			await installLfs(this.getVaultPath());
 			await configureLfs(this.git);
 		} else {
 			console.debug("[remote-vault-sync] git-lfs not installed, using binary fallback");

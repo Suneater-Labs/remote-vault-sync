@@ -28,8 +28,11 @@ export interface Commit {
   gpgsig?: string;
 }
 
-// Escape string for shell (wrap in single quotes, escape existing single quotes)
+// Platform-aware shell escaping
 function shellEscape(s: string): string {
+  if (process.platform === "win32") {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
   return `'${s.replace(/'/g, "'\\''")}'`;
 }
 

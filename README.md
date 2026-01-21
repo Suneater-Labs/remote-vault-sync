@@ -37,6 +37,31 @@ src/
     s3-lfs.ts        → LFS clean/smudge with S3 storage
 ```
 
+## Prerequisites
+
+Requires `git` and `git-lfs` installed on your system.
+
+**Windows:**
+```powershell
+winget install --id Git.Git -e --source winget
+winget install --id GitHub.GitLFS -e --source winget
+```
+
+**macOS:**
+```bash
+brew install git git-lfs
+```
+
+**Linux (Debian/Ubuntu):**
+```bash
+sudo apt install git git-lfs
+```
+
+After installing, run once:
+```bash
+git lfs install
+```
+
 ## Setup
 
 1. Create an S3 bucket

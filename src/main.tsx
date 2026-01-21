@@ -238,8 +238,8 @@ export default class VaultSync extends Plugin {
 			const hasRemoteGit = await this.s3fs!.exists(".git/HEAD");
 
 			if (!hasLocalGit && hasRemoteGit) {
-				this.updateStatus({ status: "syncing", step: "Pulling from Remote..." });
-				await this.copyDirFromS3(".git", true); // skip lfs/objects
+				this.updateStatus({ status: "syncing", step: "Pulling .git... 0%" });
+				await this.copyDirFromS3(".git", true, (pct) => this.updateStatus({ status: "syncing", step: `Pulling .git... ${pct}%` })); // skip lfs/objects
 				await this.configureGit();
 				await this.git.checkout(".");
 				if (this.lfsAvailable) {
@@ -350,10 +350,10 @@ export default class VaultSync extends Plugin {
 			const tempDir = path.join(os.tmpdir(), "remote-vault-sync-remote");
 
 			// Download S3 .git to temp directory (skip lfs/objects)
-			this.updateStatus({ status: "syncing", step: "Fetching from S3..." });
+			this.updateStatus({ status: "syncing", step: "Pulling .git... 0%" });
 			await fs.rm(tempDir, { recursive: true, force: true });
 			await fs.mkdir(tempDir, { recursive: true });
-			await this.copyDirFromS3ToPath(".git", path.join(tempDir, ".git"), true);
+			await this.copyDirFromS3ToPath(".git", path.join(tempDir, ".git"), true, (pct) => this.updateStatus({ status: "syncing", step: `Pulling .git... ${pct}%` }));
 
 			// Fetch and merge
 			this.updateStatus({ status: "syncing", step: "Merging..." });
@@ -546,47 +546,74 @@ export default class VaultSync extends Plugin {
 		}
 	}
 
-	private async copyDirFromS3(dir: string, skipLfsObjects = false) {
+	private async copyDirFromS3(dir: string, skipLfsObjects = false, onProgress?: (percent: number) => void) {
 		if (!this.s3fs) return;
 		const vaultPath = this.getVaultPath();
 
-		const entries = await this.s3fs.readdir(dir);
-		for (const entry of entries) {
-			const s3Key = `${dir}/${entry.name}`;
-			const localPath = path.join(vaultPath, s3Key);
+		// Collect all files and total size first
+		const files: { s3Key: string; localPath: string; size: number }[] = [];
+		let totalSize = 0;
 
-			// Skip lfs/objects directory if requested
-			if (skipLfsObjects && s3Key.includes(".git/lfs/objects")) continue;
-
-			if (entry.isDirectory) {
-				await this.copyDirFromS3(s3Key, skipLfsObjects);
-			} else {
-				const content = await this.s3fs.readFile(s3Key);
-				await fs.mkdir(path.dirname(localPath), { recursive: true });
-				await fs.writeFile(localPath, content);
+		const collectFiles = async (s3Prefix: string) => {
+			const entries = await this.s3fs!.readdir(s3Prefix);
+			for (const entry of entries) {
+				const s3Key = `${s3Prefix}/${entry.name}`;
+				if (skipLfsObjects && s3Key.includes(".git/lfs/objects")) continue;
+				if (entry.isDirectory) {
+					await collectFiles(s3Key);
+				} else {
+					files.push({ s3Key, localPath: path.join(vaultPath, s3Key), size: entry.size });
+					totalSize += entry.size;
+				}
 			}
+		};
+
+		await collectFiles(dir);
+
+		// Download with progress tracking
+		let downloaded = 0;
+		for (const file of files) {
+			const content = await this.s3fs.readFile(file.s3Key);
+			await fs.mkdir(path.dirname(file.localPath), { recursive: true });
+			await fs.writeFile(file.localPath, content);
+			downloaded += file.size;
+			if (onProgress && totalSize > 0) onProgress(Math.round(downloaded / totalSize * 100));
 		}
 	}
 
 	// Copy S3 directory to arbitrary local path (not vault-relative)
-	private async copyDirFromS3ToPath(s3Dir: string, localDir: string, skipLfsObjects = false) {
+	private async copyDirFromS3ToPath(s3Dir: string, localDir: string, skipLfsObjects = false, onProgress?: (percent: number) => void) {
 		if (!this.s3fs) return;
 
-		const entries = await this.s3fs.readdir(s3Dir);
-		for (const entry of entries) {
-			const s3Key = `${s3Dir}/${entry.name}`;
-			const localPath = path.join(localDir, entry.name);
+		// Collect all files and total size first
+		const files: { s3Key: string; localPath: string; size: number }[] = [];
+		let totalSize = 0;
 
-			// Skip lfs/objects directory if requested
-			if (skipLfsObjects && s3Key.includes(".git/lfs/objects")) continue;
-
-			if (entry.isDirectory) {
-				await this.copyDirFromS3ToPath(s3Key, localPath, skipLfsObjects);
-			} else {
-				const content = await this.s3fs.readFile(s3Key);
-				await fs.mkdir(path.dirname(localPath), { recursive: true });
-				await fs.writeFile(localPath, content);
+		const collectFiles = async (s3Prefix: string, localPrefix: string) => {
+			const entries = await this.s3fs!.readdir(s3Prefix);
+			for (const entry of entries) {
+				const s3Key = `${s3Prefix}/${entry.name}`;
+				const localPath = path.join(localPrefix, entry.name);
+				if (skipLfsObjects && s3Key.includes(".git/lfs/objects")) continue;
+				if (entry.isDirectory) {
+					await collectFiles(s3Key, localPath);
+				} else {
+					files.push({ s3Key, localPath, size: entry.size });
+					totalSize += entry.size;
+				}
 			}
+		};
+
+		await collectFiles(s3Dir, localDir);
+
+		// Download with progress tracking
+		let downloaded = 0;
+		for (const file of files) {
+			const content = await this.s3fs.readFile(file.s3Key);
+			await fs.mkdir(path.dirname(file.localPath), { recursive: true });
+			await fs.writeFile(file.localPath, content);
+			downloaded += file.size;
+			if (onProgress && totalSize > 0) onProgress(Math.round(downloaded / totalSize * 100));
 		}
 	}
 
@@ -639,10 +666,10 @@ export default class VaultSync extends Plugin {
 		const tempDir = path.join(os.tmpdir(), "remote-vault-sync-remote");
 
 		// Download remote .git to temp directory (skip lfs/objects)
-		this.updateStatus({ status: "syncing", step: "Fetching remote..." });
+		this.updateStatus({ status: "syncing", step: "Pulling .git... 0%" });
 		await fs.rm(tempDir, { recursive: true, force: true });
 		await fs.mkdir(tempDir, { recursive: true });
-		await this.copyDirFromS3ToPath(".git", path.join(tempDir, ".git"), true);
+		await this.copyDirFromS3ToPath(".git", path.join(tempDir, ".git"), true, (pct) => this.updateStatus({ status: "syncing", step: `Pulling .git... ${pct}%` }));
 
 		// Fetch remote commits into local repo
 		const vaultPath = this.getVaultPath();

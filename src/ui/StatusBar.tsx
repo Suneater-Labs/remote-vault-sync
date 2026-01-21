@@ -8,11 +8,11 @@ export interface StatusBarProps {
 }
 
 const statusColors: Record<SyncStatus, string> = {
-  clean: "text-green-500",
-  changes: "text-yellow-500",
-  error: "text-red-500",
-  disconnected: "text-(--text-muted)",
-  syncing: "text-(--interactive-accent) animate-pulse",
+  clean: "bg-green-500",
+  changes: "bg-yellow-500",
+  error: "bg-red-500",
+  disconnected: "bg-(--text-muted)",
+  syncing: "bg-(--interactive-accent) animate-pulse",
 };
 
 const statusLabels: Record<SyncStatus, string> = {
@@ -41,11 +41,9 @@ export const StatusBar = ({ status, step, progress }: StatusBarProps) => {
       )}
 
       <span
-        className={`${statusColors[status]} cursor-default ml-1`}
+        className={`w-2.5 h-2.5 rounded-full inline-flex items-center justify-center cursor-default ml-1 ${statusColors[status]}`}
         title={statusLabels[status]}
-      >
-        ●
-      </span>
+      />
     </div>
   );
 };

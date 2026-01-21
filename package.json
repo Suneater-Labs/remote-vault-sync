@@ -57,6 +57,7 @@
 		"dayjs": "^1.11.19",
 		"isomorphic-git": "^1.36.1",
 		"obsidian": "latest",
+		"p-limit": "^7.2.0",
 		"pako": "^1.0.11",
 		"picomatch": "^4.0.3",
 		"react": "^19.2.3",

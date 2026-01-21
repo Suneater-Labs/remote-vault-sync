@@ -5,6 +5,9 @@ import {spawn} from "child_process";
 import * as fs from "fs/promises";
 import * as path from "path";
 import * as os from "os";
+import pLimit from "p-limit";
+
+const DOWNLOAD_CONCURRENCY = 4;
 import {DEFAULT_SETTINGS, VaultSyncSettings, VaultSyncSettingTab} from "./settings";
 import {StatusBar, StatusBarProps} from "./ui/StatusBar";
 import {RibbonButtons} from "./ui/RibbonButtons";
@@ -570,15 +573,16 @@ export default class VaultSync extends Plugin {
 
 		await collectFiles(dir);
 
-		// Download with progress tracking
+		// Download with progress tracking (concurrent)
+		const limit = pLimit(DOWNLOAD_CONCURRENCY);
 		let downloaded = 0;
-		for (const file of files) {
-			const content = await this.s3fs.readFile(file.s3Key);
+		await Promise.all(files.map(file => limit(async () => {
+			const content = await this.s3fs!.readFile(file.s3Key);
 			await fs.mkdir(path.dirname(file.localPath), { recursive: true });
 			await fs.writeFile(file.localPath, content);
 			downloaded += file.size;
 			if (onProgress && totalSize > 0) onProgress(Math.round(downloaded / totalSize * 100));
-		}
+		})));
 	}
 
 	// Copy S3 directory to arbitrary local path (not vault-relative)
@@ -606,15 +610,16 @@ export default class VaultSync extends Plugin {
 
 		await collectFiles(s3Dir, localDir);
 
-		// Download with progress tracking
+		// Download with progress tracking (concurrent)
+		const limit = pLimit(DOWNLOAD_CONCURRENCY);
 		let downloaded = 0;
-		for (const file of files) {
-			const content = await this.s3fs.readFile(file.s3Key);
+		await Promise.all(files.map(file => limit(async () => {
+			const content = await this.s3fs!.readFile(file.s3Key);
 			await fs.mkdir(path.dirname(file.localPath), { recursive: true });
 			await fs.writeFile(file.localPath, content);
 			downloaded += file.size;
 			if (onProgress && totalSize > 0) onProgress(Math.round(downloaded / totalSize * 100));
-		}
+		})));
 	}
 
 	// Fetch only the LFS objects needed for current HEAD

@@ -68,11 +68,20 @@
 .remote-vault-sync .inline {
   display: inline;
 }
+.remote-vault-sync .inline-flex {
+  display: inline-flex;
+}
 .remote-vault-sync .h-1\.5 {
   height: calc(var(--spacing) * 1.5);
 }
+.remote-vault-sync .h-2\.5 {
+  height: calc(var(--spacing) * 2.5);
+}
 .remote-vault-sync .h-full {
   height: 100%;
+}
+.remote-vault-sync .w-2\.5 {
+  width: calc(var(--spacing) * 2.5);
 }
 .remote-vault-sync .w-8 {
   width: calc(var(--spacing) * 8);
@@ -186,11 +195,20 @@
 .remote-vault-sync .bg-\(--interactive-accent\) {
   background-color: var(--interactive-accent);
 }
+.remote-vault-sync .bg-\(--text-muted\) {
+  background-color: var(--text-muted);
+}
+.remote-vault-sync .bg-green-500 {
+  background-color: var(--color-green-500);
+}
 .remote-vault-sync .bg-green-500\/20 {
   background-color: color-mix(in srgb, oklch(72.3% 0.219 149.579) 20%, transparent);
   @supports (color: color-mix(in lab, red, red)) {
     background-color: color-mix(in oklab, var(--color-green-500) 20%, transparent);
   }
+}
+.remote-vault-sync .bg-red-500 {
+  background-color: var(--color-red-500);
 }
 .remote-vault-sync .bg-red-500\/20 {
   background-color: color-mix(in srgb, oklch(63.7% 0.237 25.331) 20%, transparent);
@@ -200,6 +218,9 @@
 }
 .remote-vault-sync .bg-transparent {
   background-color: transparent;
+}
+.remote-vault-sync .bg-yellow-500 {
+  background-color: var(--color-yellow-500);
 }
 .remote-vault-sync .bg-yellow-500\/20 {
   background-color: color-mix(in srgb, oklch(79.5% 0.184 86.047) 20%, transparent);
@@ -257,9 +278,6 @@
 }
 .remote-vault-sync .whitespace-pre {
   white-space: pre;
-}
-.remote-vault-sync .text-\(--interactive-accent\) {
-  color: var(--interactive-accent);
 }
 .remote-vault-sync .text-\(--text-accent\) {
   color: var(--text-accent);

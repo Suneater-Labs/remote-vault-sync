@@ -357,7 +357,8 @@ export default class VaultSync extends Plugin {
 
 			// Fetch and merge
 			this.updateStatus({ status: "syncing", step: "Merging..." });
-			await gitExec(vaultPath, ["fetch", tempDir, "main"]);
+			const branch = await this.git.currentBranch();
+			await gitExec(vaultPath, ["fetch", tempDir, branch]);
 			await fs.rm(tempDir, { recursive: true, force: true });
 
 			await gitExec(vaultPath, ["merge", "FETCH_HEAD", "-m", "merge remote"]);
@@ -645,7 +646,8 @@ export default class VaultSync extends Plugin {
 
 		// Fetch remote commits into local repo
 		const vaultPath = this.getVaultPath();
-		await gitExec(vaultPath, ["fetch", tempDir, "main"]);
+		const branch = await this.git.currentBranch();
+		await gitExec(vaultPath, ["fetch", tempDir, branch]);
 		await fs.rm(tempDir, { recursive: true, force: true });
 
 		// Merge remote into local

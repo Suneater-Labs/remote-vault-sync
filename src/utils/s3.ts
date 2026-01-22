@@ -14,6 +14,7 @@ import {
   CommonPrefix,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
+import { S3SyncClient } from "s3-sync-client";
 import { Readable } from "stream";
 import { paginate, batch } from "./paginate";
 
@@ -29,14 +30,20 @@ export interface S3Config {
 
 export class S3 {
   private client: S3Client;
-  private bucket: string;
+  private _bucket: string;
+  public syncClient: S3SyncClient;
 
   constructor(config: S3Config) {
-    this.bucket = config.bucket;
+    this._bucket = config.bucket;
     this.client = new S3Client({
       region: config.region,
       credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
     });
+    this.syncClient = new S3SyncClient({ client: this.client });
+  }
+
+  get bucket(): string {
+    return this._bucket;
   }
 
   async get(key: string): Promise<Buffer> {

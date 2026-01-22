@@ -16,6 +16,7 @@ import {DiffModal} from "./ui/DiffModal";
 import {MergeModal, Resolution} from "./ui/MergeModal";
 import {Git, GitStatus} from "./utils/git";
 import {S3} from "./utils/s3";
+import {TransferMonitor, TransferStatus} from "s3-sync-client";
 import {S3FS} from "./utils/s3-fs";
 import {getGitattributes, isLfsAvailable, configureLfs, checkoutLfs, pruneLfs, getLfsOids} from "./utils/lfs";
 import {createCommands} from "./commands";
@@ -41,6 +42,7 @@ export default class VaultSync extends Plugin {
 	private statusBarRoot: Root | null = null;
 	private statusBarState: StatusBarProps = { status: "disconnected" };
 	private git: Git | null = null;
+	private s3: S3 | null = null;
 	private s3fs: S3FS | null = null;
 	private pendingMerge: { preHead: string; modal: Modal } | null = null;
 	private locked = false;
@@ -192,8 +194,8 @@ export default class VaultSync extends Plugin {
 	}
 
 	private createS3Client() {
-		const s3 = new S3(this.settings.s3);
-		this.s3fs = new S3FS(s3);
+		this.s3 = new S3(this.settings.s3);
+		this.s3fs = new S3FS(this.s3);
 	}
 
 	private async configureGit() {
@@ -292,6 +294,7 @@ export default class VaultSync extends Plugin {
 
 		this.locked = true;
 		this.ribbonButtons?.setLocked(true);
+		const vaultPath = this.getVaultPath();
 		try {
 			// Only commit if there are changes
 			if (hasChanges) {
@@ -305,7 +308,7 @@ export default class VaultSync extends Plugin {
 			if (remoteHead && remoteHead !== newLocalHead) {
 				// Check if remote is ancestor of local (fast-forward)
 				try {
-					await gitExec(this.getVaultPath(), ["merge-base", "--is-ancestor", remoteHead, newLocalHead]);
+					await gitExec(vaultPath, ["merge-base", "--is-ancestor", remoteHead, newLocalHead]);
 					// Remote is ancestor, safe to push
 				} catch {
 					// Diverged - need to merge first
@@ -315,10 +318,15 @@ export default class VaultSync extends Plugin {
 			}
 
 			// Prune unreferenced LFS objects before push
-			if (this.lfsAvailable) await pruneLfs(this.getVaultPath());
+			if (this.lfsAvailable) await pruneLfs(vaultPath);
 
-			this.updateStatus({ status: "syncing", step: "Pushing .git..." });
-			await this.copyDirToS3(".git", (pct) => this.updateStatus({ status: "syncing", step: `Pushing .git... ${pct}%` }));
+			this.updateStatus({ status: "syncing", step: "Pushing .git... 0%" });
+			const monitor = new TransferMonitor();
+			monitor.on("progress", (progress: TransferStatus) => {
+				const pct = progress.size.total > 0 ? Math.round(progress.size.current / progress.size.total * 100) : 0;
+				this.updateStatus({ status: "syncing", step: `Pushing .git... ${pct}%` });
+			});
+			await this.s3!.syncClient.sync(path.join(vaultPath, ".git"), `s3://${this.s3!.bucket}/.git`, { monitor });
 			new Notice("Pushed to Remote");
 			this.refreshStatus();
 		} catch (e) {
@@ -503,50 +511,6 @@ export default class VaultSync extends Plugin {
 	private async ensureGitAttributes() {
 		if (await this.app.vault.adapter.exists(".gitattributes")) return;
 		await this.app.vault.adapter.write(".gitattributes", getGitattributes(this.lfsAvailable));
-	}
-
-	private async copyDirToS3(dir: string, onProgress?: (percent: number) => void) {
-		if (!this.s3fs) return;
-		const vaultPath = this.getVaultPath();
-
-		// Collect all files and total size
-		const files: { localPath: string; s3Key: string; size: number }[] = [];
-		let totalSize = 0;
-
-		const collectFiles = async (localDir: string, s3Prefix: string) => {
-			const entries = await fs.readdir(path.join(vaultPath, localDir), { withFileTypes: true });
-			for (const entry of entries) {
-				const localPath = path.join(localDir, entry.name);
-				const s3Key = `${s3Prefix}/${entry.name}`;
-				if (entry.isDirectory()) {
-					await collectFiles(localPath, s3Key);
-				} else {
-					const stat = await fs.stat(path.join(vaultPath, localPath));
-					files.push({ localPath, s3Key, size: stat.size });
-					totalSize += stat.size;
-				}
-			}
-		};
-
-		await collectFiles(dir, dir);
-
-		// Upload with progress tracking, skip existing files
-		let uploaded = 0;
-		for (const file of files) {
-			// Skip files that already exist in S3
-			if (await this.s3fs.exists(file.s3Key)) {
-				uploaded += file.size;
-				if (onProgress && totalSize > 0) onProgress(Math.round(uploaded / totalSize * 100));
-				continue;
-			}
-			const content = await fs.readFile(path.join(vaultPath, file.localPath));
-			const fileProgress = onProgress && totalSize > 0
-				? (percent: number) => onProgress(Math.round((uploaded + file.size * percent / 100) / totalSize * 100))
-				: undefined;
-			await this.s3fs.writeFile(file.s3Key, content, fileProgress, file.size);
-			uploaded += file.size;
-			if (onProgress && totalSize > 0) onProgress(Math.round(uploaded / totalSize * 100));
-		}
 	}
 
 	private async copyDirFromS3(dir: string, skipLfsObjects = false, onProgress?: (percent: number) => void) {
@@ -774,9 +738,14 @@ export default class VaultSync extends Plugin {
 			modalToClose?.close();
 
 			// Continue with push
-			if (this.lfsAvailable) await pruneLfs(this.getVaultPath());
-			this.updateStatus({ status: "syncing", step: "Pushing .git..." });
-			await this.copyDirToS3(".git", (pct) => this.updateStatus({ status: "syncing", step: `Pushing .git... ${pct}%` }));
+			if (this.lfsAvailable) await pruneLfs(vaultPath);
+			this.updateStatus({ status: "syncing", step: "Pushing .git... 0%" });
+			const monitor = new TransferMonitor();
+			monitor.on("progress", (progress: TransferStatus) => {
+				const pct = progress.size.total > 0 ? Math.round(progress.size.current / progress.size.total * 100) : 0;
+				this.updateStatus({ status: "syncing", step: `Pushing .git... ${pct}%` });
+			});
+			await this.s3!.syncClient.sync(path.join(vaultPath, ".git"), `s3://${this.s3!.bucket}/.git`, { monitor });
 			new Notice("Pushed to Remote");
 			this.refreshStatus();
 		} catch (e) {

@@ -6,8 +6,6 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import * as os from "os";
 import pLimit from "p-limit";
-
-const DOWNLOAD_CONCURRENCY = 4;
 import {DEFAULT_SETTINGS, VaultSyncSettings, VaultSyncSettingTab} from "./settings";
 import {StatusBar, StatusBarProps} from "./ui/StatusBar";
 import {RibbonButtons} from "./ui/RibbonButtons";
@@ -20,6 +18,8 @@ import {TransferMonitor, TransferStatus} from "s3-sync-client";
 import {S3FS} from "./utils/s3-fs";
 import {getGitattributes, isLfsAvailable, configureLfs, checkoutLfs, pruneLfs, getLfsOids} from "./utils/lfs";
 import {createCommands} from "./commands";
+
+const DOWNLOAD_CONCURRENCY = 4;
 
 // Run arbitrary git command (for commands not wrapped by Git class)
 function gitExec(cwd: string, args: string[]): Promise<string> {

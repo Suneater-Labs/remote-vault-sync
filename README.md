@@ -4,12 +4,12 @@ Back up and sync your vault to S3 with git-based version control.
 
 <table>
   <tr>
-    <td><img src="https://github.com/user-attachments/assets/a8db793d-6b09-4d27-a88f-ad8a2d5e0660" alt="Git initialized notification and file badges" /></td>
-    <td><img src="https://github.com/user-attachments/assets/21c70822-483c-4d22-b8fa-084ed82afc87" alt="View changes diff modal" /></td>
+    <td align="center"><img src="https://github.com/user-attachments/assets/a8db793d-6b09-4d27-a88f-ad8a2d5e0660" alt="Git initialized notification and file badges" /><br/><em>File badges &amp; notifications</em></td>
+    <td align="center"><img src="https://github.com/user-attachments/assets/21c70822-483c-4d22-b8fa-084ed82afc87" alt="View changes diff modal" /><br/><em>View changes diff</em></td>
   </tr>
   <tr>
-    <td><img src="https://github.com/user-attachments/assets/02e089e9-9e4a-4216-bf66-c176816a335f" alt="Merge modal popup" /></td>
-    <td><img src="https://github.com/user-attachments/assets/d269f0e4-66d9-4d7e-93aa-c5065fd4f824" alt="Status bar sync indicator" /></td>
+    <td align="center"><img src="https://github.com/user-attachments/assets/02e089e9-9e4a-4216-bf66-c176816a335f" alt="Merge modal popup" /><br/><em>Merge conflict resolution</em></td>
+    <td align="center"><img src="https://github.com/user-attachments/assets/d269f0e4-66d9-4d7e-93aa-c5065fd4f824" alt="Status bar sync indicator" /><br/><em>Status bar indicator</em></td>
   </tr>
 </table>
 

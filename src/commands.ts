@@ -4,28 +4,28 @@ import VaultSync from './main';
 export function createCommands(plugin: VaultSync): Command[] {
 	return [
 		{
-			id: 'remote-vault-sync-push',
+			id: 'push',
 			name: 'Push to Remote',
 			callback: () => plugin.push(),
 		},
 		{
-			id: 'remote-vault-sync-pull',
+			id: 'pull',
 			name: 'Pull from Remote',
 			callback: () => plugin.pull(),
 		},
 		{
-			id: 'remote-vault-sync-restore',
+			id: 'restore',
 			name: 'Restore Changes',
 			callback: () => plugin.restore(),
 		},
 		{
-			id: 'remote-vault-sync-log',
+			id: 'log',
 			name: 'Show Log',
 			callback: () => plugin.showLogModal(),
 		},
 		{
-			id: 'remote-vault-sync-diff',
-			name: 'View Changes',
+			id: 'diff',
+			name: 'View Changes/Diff',
 			callback: () => plugin.showDiffModal(),
 		},
 	];

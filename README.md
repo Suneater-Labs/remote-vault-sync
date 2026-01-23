@@ -90,8 +90,8 @@ git lfs install
 
 ```
 s3://bucket/
-  .git/           → git repository (mirrored from local)
-  lfs/ab/cd/...   → large files (sharded by SHA256)
+  .git/                     → git repository (mirrored from local)
+    lfs/objects/AB/CD/...   → LFS objects (sharded by SHA256)
 ```
 
 ## Status Bar

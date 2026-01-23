@@ -1,5 +1,6 @@
 // Native git command wrapper
 import { spawn } from "child_process";
+import { gitEnv } from "./env";
 
 export interface GitStatus {
   staged: string[];
@@ -40,7 +41,7 @@ function shellEscape(s: string): string {
 async function exec(cwd: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const escaped = args.map(shellEscape);
-    const proc = spawn("git", escaped, { cwd, shell: true });
+    const proc = spawn("git", escaped, { cwd, shell: true, env: gitEnv });
     let stdout = "";
     let stderr = "";
 
@@ -58,6 +59,11 @@ async function exec(cwd: string, args: string[]): Promise<string> {
 
 export class Git {
   constructor(private cwd: string) {}
+
+  // Run arbitrary git command with any cwd
+  static exec(cwd: string, args: string[]): Promise<string> {
+    return exec(cwd, args);
+  }
 
   async init(): Promise<void> {
     await exec(this.cwd, ["init"]);

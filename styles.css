@@ -20,6 +20,9 @@
 .remote-vault-sync .collapse {
   visibility: collapse;
 }
+.remote-vault-sync .static {
+  position: static;
+}
 .remote-vault-sync .sticky {
   position: sticky;
 }

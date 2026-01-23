@@ -1,8 +1,10 @@
 import {spawn} from "child_process";
 import {Git} from "./git";
+import {gitEnv} from "./env";
 
 // Git attributes for LFS-tracked files (fallback to binary if LFS unavailable)
-const LFS_GITATTRIBUTES = `*.png filter=lfs diff=lfs merge=lfs -text
+const LFS_GITATTRIBUTES = `* text=auto eol=lf
+*.png filter=lfs diff=lfs merge=lfs -text
 *.jpg filter=lfs diff=lfs merge=lfs -text
 *.jpeg filter=lfs diff=lfs merge=lfs -text
 *.gif filter=lfs diff=lfs merge=lfs -text
@@ -20,7 +22,8 @@ const LFS_GITATTRIBUTES = `*.png filter=lfs diff=lfs merge=lfs -text
 *.gz filter=lfs diff=lfs merge=lfs -text
 `;
 
-const BINARY_GITATTRIBUTES = `*.png binary
+const BINARY_GITATTRIBUTES = `* text=auto eol=lf
+*.png binary
 *.jpg binary
 *.jpeg binary
 *.gif binary
@@ -46,7 +49,7 @@ export function getGitattributes(lfsAvailable: boolean): string {
 // Check if git-lfs is installed
 export async function isLfsAvailable(cwd: string): Promise<boolean> {
 	return new Promise((resolve) => {
-		const proc = spawn("git", ["lfs", "version"], {cwd, shell: true});
+		const proc = spawn("git", ["lfs", "version"], {cwd, shell: true, env: gitEnv});
 		proc.on("close", (code) => resolve(code === 0));
 		proc.on("error", () => resolve(false));
 	});
@@ -55,7 +58,7 @@ export async function isLfsAvailable(cwd: string): Promise<boolean> {
 // Install git-lfs locally in repo (--local flag = no global config)
 export async function installLfs(cwd: string): Promise<void> {
 	return new Promise((resolve, reject) => {
-		const proc = spawn("git", ["lfs", "install", "--local"], {cwd, shell: true});
+		const proc = spawn("git", ["lfs", "install", "--local"], {cwd, shell: true, env: gitEnv});
 		let stderr = "";
 		proc.stderr.on("data", (data: Buffer) => (stderr += data.toString()));
 		proc.on("close", (code) => {
@@ -80,7 +83,7 @@ export async function configureLfs(git: Git): Promise<void> {
 // Replace LFS pointer files with actual content
 export async function checkoutLfs(cwd: string): Promise<void> {
 	return new Promise((resolve, reject) => {
-		const proc = spawn("git", ["lfs", "checkout"], {cwd, shell: true});
+		const proc = spawn("git", ["lfs", "checkout"], {cwd, shell: true, env: gitEnv});
 		let stderr = "";
 		proc.stderr.on("data", (data: Buffer) => (stderr += data.toString()));
 		proc.on("close", (code) => {
@@ -94,7 +97,7 @@ export async function checkoutLfs(cwd: string): Promise<void> {
 // Remove unreferenced LFS objects to save space
 export async function pruneLfs(cwd: string): Promise<void> {
 	return new Promise((resolve, reject) => {
-		const proc = spawn("git", ["lfs", "prune"], {cwd, shell: true});
+		const proc = spawn("git", ["lfs", "prune"], {cwd, shell: true, env: gitEnv});
 		let stderr = "";
 		proc.stderr.on("data", (data: Buffer) => (stderr += data.toString()));
 		proc.on("close", (code) => {
@@ -108,7 +111,7 @@ export async function pruneLfs(cwd: string): Promise<void> {
 // Get OIDs of LFS files in current HEAD
 export async function getLfsOids(cwd: string): Promise<string[]> {
 	return new Promise((resolve, reject) => {
-		const proc = spawn("git", ["lfs", "ls-files", "--long"], {cwd, shell: true});
+		const proc = spawn("git", ["lfs", "ls-files", "--long"], {cwd, shell: true, env: gitEnv});
 		let stdout = "";
 		let stderr = "";
 		proc.stdout.on("data", (data: Buffer) => (stdout += data.toString()));

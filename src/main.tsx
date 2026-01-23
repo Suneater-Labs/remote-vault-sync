@@ -1,7 +1,6 @@
 import {debounce, Modal, Notice, Plugin} from 'obsidian';
 import {createElement} from 'react';
 import {createRoot, Root} from 'react-dom/client';
-import {spawn} from "child_process";
 import * as fs from "fs/promises";
 import * as path from "path";
 import * as os from "os";
@@ -17,22 +16,6 @@ import {TransferMonitor, TransferStatus} from "s3-sync-client";
 import {S3FS} from "./utils/s3-fs";
 import {getGitattributes, isLfsAvailable, configureLfs, checkoutLfs, pruneLfs, getLfsOids} from "./utils/lfs";
 import {createCommands} from "./commands";
-
-// Run arbitrary git command (for commands not wrapped by Git class)
-function gitExec(cwd: string, args: string[]): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn("git", args, { cwd });
-    let stdout = "";
-    let stderr = "";
-    proc.stdout.on("data", (data: Buffer) => (stdout += data.toString()));
-    proc.stderr.on("data", (data: Buffer) => (stderr += data.toString()));
-    proc.on("close", (code) => {
-      if (code === 0) resolve(stdout.trim());
-      else reject(new Error(`git ${args[0]} failed: ${stderr || stdout}`));
-    });
-    proc.on("error", reject);
-  });
-}
 
 export default class VaultSync extends Plugin {
 	settings: VaultSyncSettings;
@@ -310,7 +293,7 @@ export default class VaultSync extends Plugin {
 			if (remoteHead && remoteHead !== newLocalHead) {
 				// Check if remote is ancestor of local (fast-forward)
 				try {
-					await gitExec(vaultPath, ["merge-base", "--is-ancestor", remoteHead, newLocalHead]);
+					await Git.exec(vaultPath, ["merge-base", "--is-ancestor", remoteHead, newLocalHead]);
 					// Remote is ancestor, safe to push
 				} catch {
 					// Diverged - need to merge first
@@ -376,10 +359,10 @@ export default class VaultSync extends Plugin {
 			// Fetch and merge
 			this.updateStatus({ status: "syncing", step: "Merging..." });
 			const branch = await this.git.currentBranch();
-			await gitExec(vaultPath, ["fetch", tempDir, branch]);
+			await Git.exec(vaultPath, ["fetch", tempDir, branch]);
 			await fs.rm(tempDir, { recursive: true, force: true });
 
-			await gitExec(vaultPath, ["merge", "FETCH_HEAD", "-m", "merge remote"]);
+			await Git.exec(vaultPath, ["merge", "FETCH_HEAD", "-m", "merge remote"]);
 			if (this.lfsAvailable) {
 				await this.fetchNeededLfsObjects();
 				await checkoutLfs(vaultPath);
@@ -426,7 +409,7 @@ export default class VaultSync extends Plugin {
 		this.ribbonButtons?.setLocked(true);
 		try {
 			this.updateStatus({ status: "syncing", step: "Restoring..." });
-			await gitExec(this.getVaultPath(), ["restore", "."]);
+			await Git.exec(this.getVaultPath(), ["restore", "."]);
 			new Notice("Restored");
 			this.refreshStatus();
 		} catch (e) {
@@ -582,20 +565,20 @@ export default class VaultSync extends Plugin {
 		// Fetch remote commits into local repo
 		const vaultPath = this.getVaultPath();
 		const branch = await this.git.currentBranch();
-		await gitExec(vaultPath, ["fetch", tempDir, branch]);
+		await Git.exec(vaultPath, ["fetch", tempDir, branch]);
 		await fs.rm(tempDir, { recursive: true, force: true });
 
 		// Merge remote into local
 		this.updateStatus({ status: "syncing", step: "Merging..." });
 		try {
-			await gitExec(vaultPath, ["merge", "FETCH_HEAD", "-m", "merge remote"]);
+			await Git.exec(vaultPath, ["merge", "FETCH_HEAD", "-m", "merge remote"]);
 			if (this.lfsAvailable) {
 				await this.fetchNeededLfsObjects();
 				await checkoutLfs(vaultPath);
 			}
 		} catch (e) {
 			// Check for conflicts
-			const out = await gitExec(vaultPath, ["diff", "--name-only", "--diff-filter=U"]);
+			const out = await Git.exec(vaultPath, ["diff", "--name-only", "--diff-filter=U"]);
 			const conflicts = out.trim() ? out.trim().split("\n") : [];
 			if (conflicts.length) {
 				await this.showMergeModal(conflicts, preHead);
@@ -657,9 +640,9 @@ export default class VaultSync extends Plugin {
 			for (const file of conflicts) {
 				const resolution = resolutions[file];
 				if (resolution === "ours") {
-					await gitExec(vaultPath, ["checkout", "--ours", file]);
+					await Git.exec(vaultPath, ["checkout", "--ours", file]);
 				} else if (resolution === "theirs") {
-					await gitExec(vaultPath, ["checkout", "--theirs", file]);
+					await Git.exec(vaultPath, ["checkout", "--theirs", file]);
 				} else {
 					// "both" - keep file as-is but strip conflict markers
 					const content = await this.app.vault.adapter.read(file);
@@ -704,7 +687,7 @@ export default class VaultSync extends Plugin {
 		try {
 			this.updateStatus({ status: "syncing", step: "Aborting merge..." });
 			const vaultPath = this.getVaultPath();
-			await gitExec(vaultPath, ["merge", "--abort"]);
+			await Git.exec(vaultPath, ["merge", "--abort"]);
 			await this.git.resetHard(preHead);
 
 			new Notice("Merge cancelled");

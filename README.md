@@ -23,7 +23,7 @@ Uses native git via `child_process`. The `.git` directory is copied to/from S3 d
 src/
   main.tsx           → Plugin entry, orchestrates git/S3/UI
   commands.ts        → Command palette commands
-  settings.ts        → Settings tab and defaults
+  settings.tsx       → Settings tab and defaults
   ui/
     StatusBar.tsx    → Status bar component
     RibbonButtons.ts → Push/Pull/Restore ribbon icons
@@ -32,9 +32,10 @@ src/
     MergeModal.tsx   → Conflict resolution modal
   utils/
     git.ts           → Native git wrapper (child_process)
+    lfs.ts           → Git LFS utilities
+    env.ts           → Environment setup for GUI apps
     s3.ts            → S3 client wrapper
     s3-fs.ts         → S3 filesystem operations
-    s3-lfs.ts        → LFS clean/smudge with S3 storage
 ```
 
 ## Prerequisites

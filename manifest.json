@@ -5,6 +5,6 @@
 	"minAppVersion": "1.0.0",
 	"description": "Back up and sync your vault to S3 with git-based version control.",
 	"author": "bebeal",
-	"authorUrl": "https://github.com/Suneater-Labs",
+	"authorUrl": "https://github.com/bebeal",
 	"isDesktopOnly": true
 }

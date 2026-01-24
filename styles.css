@@ -12,10 +12,14 @@
   --text-sm: 0.875rem;
   --text-sm--line-height: calc(1.25 / 0.875);
   --font-weight-medium: 500;
+  --font-weight-semibold: 600;
   --radius-xl: 0.75rem;
   --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --default-transition-duration: 150ms;
   --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+.remote-vault-sync .pointer-events-none, .remote-vault-sync.pointer-events-none {
+  pointer-events: none;
 }
 .remote-vault-sync .collapse, .remote-vault-sync.collapse {
   visibility: collapse;
@@ -49,6 +53,9 @@
   @media (width >= 96rem) {
     max-width: 96rem;
   }
+}
+.remote-vault-sync .mx-0\.5, .remote-vault-sync.mx-0\.5 {
+  margin-inline: calc(var(--spacing) * 0.5);
 }
 .remote-vault-sync .mb-2, .remote-vault-sync.mb-2 {
   margin-bottom: calc(var(--spacing) * 2);
@@ -140,6 +147,9 @@
 .remote-vault-sync .gap-4, .remote-vault-sync.gap-4 {
   gap: calc(var(--spacing) * 4);
 }
+.remote-vault-sync .self-center, .remote-vault-sync.self-center {
+  align-self: center;
+}
 .remote-vault-sync .self-end, .remote-vault-sync.self-end {
   align-self: flex-end;
 }
@@ -183,11 +193,21 @@
   border-bottom-style: var(--tw-border-style);
   border-bottom-width: 1px;
 }
+.remote-vault-sync .border-l-2, .remote-vault-sync.border-l-2 {
+  border-left-style: var(--tw-border-style);
+  border-left-width: 2px;
+}
 .remote-vault-sync .border-\(--background-modifier-border\), .remote-vault-sync.border-\(--background-modifier-border\) {
   border-color: var(--background-modifier-border);
 }
 .remote-vault-sync .border-\(--interactive-accent\), .remote-vault-sync.border-\(--interactive-accent\) {
   border-color: var(--interactive-accent);
+}
+.remote-vault-sync .border-l-\[rgba\(69\,137\,191\,0\.5\)\], .remote-vault-sync.border-l-\[rgba\(69\,137\,191\,0\.5\)\] {
+  border-left-color: rgba(69,137,191,0.5);
+}
+.remote-vault-sync .border-l-\[rgba\(88\,166\,92\,0\.5\)\], .remote-vault-sync.border-l-\[rgba\(88\,166\,92\,0\.5\)\] {
+  border-left-color: rgba(88,166,92,0.5);
 }
 .remote-vault-sync .bg-\(--background-modifier-border\), .remote-vault-sync.bg-\(--background-modifier-border\) {
   background-color: var(--background-modifier-border);
@@ -206,6 +226,12 @@
 }
 .remote-vault-sync .bg-\(--text-muted\), .remote-vault-sync.bg-\(--text-muted\) {
   background-color: var(--text-muted);
+}
+.remote-vault-sync .bg-\[rgba\(69\,137\,191\,0\.08\)\], .remote-vault-sync.bg-\[rgba\(69\,137\,191\,0\.08\)\] {
+  background-color: rgba(69,137,191,0.08);
+}
+.remote-vault-sync .bg-\[rgba\(88\,166\,92\,0\.08\)\], .remote-vault-sync.bg-\[rgba\(88\,166\,92\,0\.08\)\] {
+  background-color: rgba(88,166,92,0.08);
 }
 .remote-vault-sync .bg-green-500, .remote-vault-sync.bg-green-500 {
   background-color: var(--color-green-500);
@@ -281,9 +307,16 @@
   font-size: var(--text-xs);
   line-height: var(--tw-leading, var(--text-xs--line-height));
 }
+.remote-vault-sync .text-\[10px\], .remote-vault-sync.text-\[10px\] {
+  font-size: 10px;
+}
 .remote-vault-sync .font-medium, .remote-vault-sync.font-medium {
   --tw-font-weight: var(--font-weight-medium);
   font-weight: var(--font-weight-medium);
+}
+.remote-vault-sync .font-semibold, .remote-vault-sync.font-semibold {
+  --tw-font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-semibold);
 }
 .remote-vault-sync .whitespace-pre, .remote-vault-sync.whitespace-pre {
   white-space: pre;
@@ -352,41 +385,6 @@
 }
 .nav-file-title .nav-file-title-content {
   flex: 1;
-}
-.remote-vault-sync-badge {
-  margin: 0 2px;
-  font-size: 10px;
-  font-weight: 600;
-  align-self: center;
-}
-.remote-vault-sync-badge-M {
-  color: var(--color-yellow-500);
-}
-.remote-vault-sync-badge-U {
-  color: var(--color-green-500);
-}
-.remote-vault-sync-badge-A {
-  color: var(--color-green-500);
-}
-.remote-vault-sync-badge-D {
-  color: var(--color-red-500);
-}
-.remote-vault-sync-ribbon-disabled {
-  opacity: 0.3;
-  pointer-events: none;
-  cursor: not-allowed;
-}
-.remote-vault-sync-conflict-marker {
-  color: var(--text-muted);
-  font-weight: 600;
-}
-.remote-vault-sync-conflict-local {
-  background: rgba(88, 166, 92, 0.08);
-  border-left: 2px solid rgba(88, 166, 92, 0.5);
-}
-.remote-vault-sync-conflict-remote {
-  background: rgba(69, 137, 191, 0.08);
-  border-left: 2px solid rgba(69, 137, 191, 0.5);
 }
 @property --tw-border-style {
   syntax: "*";

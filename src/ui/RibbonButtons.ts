@@ -25,14 +25,18 @@ export class RibbonButtons {
 		}
 	}
 
+	private toggleDisabled(el: HTMLElement, disabled: boolean) {
+		["opacity-30", "pointer-events-none", "cursor-not-allowed"].forEach(c => el.toggleClass(c, disabled));
+	}
+
 	setLocked(locked: boolean) {
-		this.pushEl.toggleClass('remote-vault-sync-ribbon-disabled', locked);
-		this.pullEl.toggleClass('remote-vault-sync-ribbon-disabled', locked);
-		this.restoreEl.toggleClass('remote-vault-sync-ribbon-disabled', locked);
+		this.toggleDisabled(this.pushEl, locked);
+		this.toggleDisabled(this.pullEl, locked);
+		this.toggleDisabled(this.restoreEl, locked);
 	}
 
 	setRestoreDisabled(disabled: boolean) {
-		this.restoreEl.toggleClass('remote-vault-sync-ribbon-disabled', disabled);
+		this.toggleDisabled(this.restoreEl, disabled);
 	}
 
 	destroy() {

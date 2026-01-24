@@ -99,7 +99,7 @@ export default class VaultSync extends Plugin {
 		this.explorerObserver?.disconnect();
 		this.ribbonButtons?.destroy();
 		this.statusBarRoot?.unmount();
-		document.querySelectorAll(".remote-vault-sync-badge").forEach(el => el.remove());
+		document.querySelectorAll(".remote-vault-sync-file-badge").forEach(el => el.remove());
 	}
 
 	private mountStatusBar() {
@@ -119,7 +119,7 @@ export default class VaultSync extends Plugin {
 
 	// Render git status badges in file explorer
 	private updateFileDecorations(status: GitStatus) {
-		document.querySelectorAll(".remote-vault-sync-badge").forEach(el => el.remove());
+		document.querySelectorAll(".remote-vault-sync-file-badge").forEach(el => el.remove());
 
 		// Priority order: U < M < A < D (later entries override earlier)
 		const sources: [string[], string][] = [
@@ -145,8 +145,9 @@ export default class VaultSync extends Plugin {
 				}
 			}
 			if (!badge) return;
+			const badgeColors: Record<string, string> = { M: "text-yellow-500", U: "text-green-500", A: "text-green-500", D: "text-red-500" };
 			const span = document.createElement("span");
-			span.className = `remote-vault-sync-badge remote-vault-sync-badge-${badge}`;
+			span.className = `remote-vault-sync remote-vault-sync-file-badge mx-0.5 text-[10px] font-semibold self-center ${badgeColors[badge]}`;
 			span.textContent = badge;
 			el.appendChild(span);
 		});

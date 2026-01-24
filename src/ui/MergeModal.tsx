@@ -35,11 +35,11 @@ function renderConflictContent(content: string, resolution?: Resolution) {
     const isRemoteDimmed = resolution === "ours";
 
     if (mode === "local") {
-      const cls = isLocalDimmed ? "opacity-30 line-through" : "remote-vault-sync-conflict-local";
+      const cls = isLocalDimmed ? "opacity-30 line-through" : "bg-[rgba(88,166,92,0.08)] border-l-2 border-l-[rgba(88,166,92,0.5)]";
       return <div key={i} className={`${cls} whitespace-pre`}>{line || " "}</div>;
     }
     if (mode === "remote") {
-      const cls = isRemoteDimmed ? "opacity-30 line-through" : "remote-vault-sync-conflict-remote";
+      const cls = isRemoteDimmed ? "opacity-30 line-through" : "bg-[rgba(69,137,191,0.08)] border-l-2 border-l-[rgba(69,137,191,0.5)]";
       return <div key={i} className={`${cls} whitespace-pre`}>{line || " "}</div>;
     }
     return <div key={i} className="whitespace-pre">{line || " "}</div>;

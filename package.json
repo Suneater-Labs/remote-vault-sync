@@ -1,6 +1,6 @@
 {
 	"name": "remote-vault-sync",
-	"version": "1.1.1",
+	"version": "1.1.2",
 	"description": "Back up and sync your vault to S3 with git-based version control.",
 	"main": "main.js",
 	"type": "module",

@@ -5,27 +5,27 @@ export function createCommands(plugin: VaultSync): Command[] {
 	return [
 		{
 			id: 'push',
-			name: 'Push to Remote',
+			name: 'Push to remote',
 			callback: () => plugin.push(),
 		},
 		{
 			id: 'pull',
-			name: 'Pull from Remote',
+			name: 'Pull from remote',
 			callback: () => plugin.pull(),
 		},
 		{
 			id: 'restore',
-			name: 'Restore Changes',
+			name: 'Restore changes',
 			callback: () => plugin.restore(),
 		},
 		{
 			id: 'log',
-			name: 'Show Log',
+			name: 'Show log',
 			callback: () => plugin.showLogModal(),
 		},
 		{
 			id: 'diff',
-			name: 'View Changes/Diff',
+			name: 'View changes/diff',
 			callback: () => plugin.showDiffModal(),
 		},
 	];

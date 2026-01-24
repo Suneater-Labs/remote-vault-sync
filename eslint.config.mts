@@ -25,9 +25,6 @@ export default tseslint.config(
 	...obsidianmd.configs.recommended,
 	{
 		rules: {
-			"obsidianmd/no-static-styles-assignment": "off",
-			"obsidianmd/ui/sentence-case": "off",
-			"obsidianmd/hardcoded-config-path": "off",
 			"import/no-nodejs-modules": "off",
 		},
 	},

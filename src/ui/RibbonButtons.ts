@@ -11,9 +11,9 @@ export class RibbonButtons {
 
 	constructor(plugin: Plugin, onPush: () => void, onPull: () => void, onRestore: () => void) {
 		addIcon('cloud-backup', CLOUD_BACKUP_SVG);
-		this.pushEl = plugin.addRibbonIcon('upload-cloud', 'Push to Remote', onPush);
-		this.restoreEl = plugin.addRibbonIcon('cloud-backup', 'Restore Changes', onRestore);
-		this.pullEl = plugin.addRibbonIcon('download-cloud', 'Pull from Remote', onPull);
+		this.pushEl = plugin.addRibbonIcon('upload-cloud', 'Push to remote', onPush);
+		this.restoreEl = plugin.addRibbonIcon('cloud-backup', 'Restore changes', onRestore);
+		this.pullEl = plugin.addRibbonIcon('download-cloud', 'Pull from remote', onPull);
 	}
 
 	reorder() {

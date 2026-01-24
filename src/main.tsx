@@ -236,7 +236,7 @@ export default class VaultSync extends Plugin {
 					await this.fetchNeededLfsObjects(); // download only needed LFS
 					await checkoutLfs(this.getVaultPath());
 				}
-				new Notice("Pulled from Remote");
+				new Notice("Pulled from remote");
 			} else if (!hasLocalGit) {
 				this.updateStatus({ status: "syncing", step: "Initializing..." });
 				await this.git.init();
@@ -312,7 +312,7 @@ export default class VaultSync extends Plugin {
 				this.updateStatus({ status: "syncing", step: `Pushing .git... ${pct}%` });
 			});
 			await this.s3!.syncClient.sync(path.join(vaultPath, ".git"), `s3://${this.s3!.bucket}/.git`, { monitor });
-			new Notice("Pushed to Remote");
+			new Notice("Pushed to remote");
 			this.refreshStatus();
 		} catch (e) {
 			console.error("[remote-vault-sync] Push failed:", e);
@@ -368,7 +368,7 @@ export default class VaultSync extends Plugin {
 				await checkoutLfs(vaultPath);
 			}
 
-			new Notice("Pulled from Remote");
+			new Notice("Pulled from remote");
 		} catch (e) {
 			console.error("[remote-vault-sync] Pull failed:", e);
 			new Notice(`Pull failed: ${e instanceof Error ? e.message : String(e)}`);
@@ -388,7 +388,7 @@ export default class VaultSync extends Plugin {
 		// Show confirmation modal
 		const confirmed = await new Promise<boolean>((resolve) => {
 			const modal = new Modal(this.app);
-			modal.titleEl.setText("Discard Changes?");
+			modal.titleEl.setText("Discard changes?");
 			modal.contentEl.createEl("p", { text: "This will discard all local changes. Continue?" });
 			const btnContainer = modal.contentEl.createDiv({ cls: "modal-button-container" });
 			btnContainer.createEl("button", { text: "Cancel" }).addEventListener("click", () => {
@@ -450,14 +450,11 @@ export default class VaultSync extends Plugin {
 		try {
 			const commits = await this.git.log(500);
 			const modal = new Modal(this.app);
-			modal.titleEl.setText("Commit History");
+			modal.titleEl.setText("Commit history");
 
-			// Make header sticky: modal content as flex column, content area scrolls
-			modal.modalEl.style.display = "flex";
-			modal.modalEl.style.flexDirection = "column";
-			modal.modalEl.style.maxHeight = "80vh";
-			modal.contentEl.style.overflow = "auto";
-			modal.contentEl.style.flex = "1";
+			// Make modal a flex column so React content can scroll
+			modal.modalEl.addClasses(["remote-vault-sync", "flex", "flex-col", "max-h-[80vh]"]);
+			modal.contentEl.addClasses(["overflow-auto", "flex-1"]);
 
 			const root = createRoot(modal.contentEl);
 			root.render(createElement(LogModal, {commits}));
@@ -481,12 +478,9 @@ export default class VaultSync extends Plugin {
 			const modal = new Modal(this.app);
 			modal.titleEl.setText("Changes");
 
-			// Make header sticky: modal content as flex column, content area scrolls
-			modal.modalEl.style.display = "flex";
-			modal.modalEl.style.flexDirection = "column";
-			modal.modalEl.style.maxHeight = "80vh";
-			modal.contentEl.style.overflow = "auto";
-			modal.contentEl.style.flex = "1";
+			// Make modal a flex column so React content can scroll
+			modal.modalEl.addClasses(["remote-vault-sync", "flex", "flex-col", "max-h-[80vh]"]);
+			modal.contentEl.addClasses(["overflow-auto", "flex-1"]);
 
 			const root = createRoot(modal.contentEl);
 			root.render(createElement(DiffModal, {app: this.app, diff, status}));
@@ -602,14 +596,11 @@ export default class VaultSync extends Plugin {
 		const conflictContents: Record<string, string> = Object.fromEntries(entries);
 
 		const modal = new Modal(this.app);
-		modal.titleEl.setText("Merge Conflicts");
+		modal.titleEl.setText("Merge conflicts");
 
-		modal.modalEl.style.display = "flex";
-		modal.modalEl.style.flexDirection = "column";
-		modal.modalEl.style.maxHeight = "80vh";
-		modal.modalEl.style.width = "800px";
-		modal.contentEl.style.overflow = "auto";
-		modal.contentEl.style.flex = "1";
+		// Make modal a flex column so React content can scroll
+		modal.modalEl.addClasses(["remote-vault-sync", "flex", "flex-col", "max-h-[80vh]", "w-[800px]"]);
+		modal.contentEl.addClasses(["overflow-auto", "flex-1"]);
 
 		this.pendingMerge = { preHead, modal };
 
@@ -668,7 +659,7 @@ export default class VaultSync extends Plugin {
 				this.updateStatus({ status: "syncing", step: `Pushing .git... ${pct}%` });
 			});
 			await this.s3!.syncClient.sync(path.join(vaultPath, ".git"), `s3://${this.s3!.bucket}/.git`, { monitor });
-			new Notice("Pushed to Remote");
+			new Notice("Pushed to remote");
 			this.refreshStatus();
 		} catch (e) {
 			console.error("[remote-vault-sync] Resolve failed:", e);

@@ -1,7 +1,7 @@
 {
 	"id": "remote-vault-sync",
 	"name": "Remote Vault Sync",
-	"version": "1.1.3",
+	"version": "1.1.4",
 	"minAppVersion": "1.0.0",
 	"description": "Back up and sync your vault to S3 with git-based version control.",
 	"author": "bebeal",

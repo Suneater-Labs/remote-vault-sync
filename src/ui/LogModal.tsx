@@ -17,9 +17,10 @@ function formatDate(ts: number): string {
 
 export interface LogModalProps {
   commits: Commit[];
+  onSelect?: (oid: string) => void;
 }
 
-export const LogModal = ({commits}: LogModalProps) => {
+export const LogModal = ({commits, onSelect}: LogModalProps) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -49,8 +50,8 @@ export const LogModal = ({commits}: LogModalProps) => {
           return (
             <div
               key={c.oid}
-              onClick={() => toggle(c.oid)}
-              className={`flex flex-col gap-1 p-2 rounded bg-(--background-secondary) ${c.message.length > 50 ? "cursor-pointer" : ""}`}
+              onClick={() => onSelect ? onSelect(c.oid) : toggle(c.oid)}
+              className="flex flex-col gap-1 p-2 rounded bg-(--background-secondary) cursor-pointer hover:bg-(--background-modifier-hover)"
             >
               <div className="flex items-center gap-2">
                 <code className="text-xs text-(--text-accent) font-mono">{c.oid.slice(0, 7)}</code>

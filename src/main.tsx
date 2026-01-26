@@ -458,7 +458,7 @@ export default class VaultSync extends Plugin {
 			modal.contentEl.addClasses(["overflow-auto", "flex-1"]);
 
 			const root = createRoot(modal.contentEl);
-			root.render(createElement(LogModal, {commits}));
+			root.render(createElement(LogModal, {commits, onSelect: (oid: string) => { void this.showCommitDiffModal(oid); }}));
 			modal.onClose = () => root.unmount();
 			modal.open();
 		} catch (e) {
@@ -489,6 +489,32 @@ export default class VaultSync extends Plugin {
 			modal.open();
 		} catch (e) {
 			console.error("[remote-vault-sync] Diff failed:", e);
+			new Notice(`Failed to get diff: ${e instanceof Error ? e.message : String(e)}`);
+		}
+	}
+
+	// Show diff from a specific commit to HEAD
+	async showCommitDiffModal(commit: string) {
+		if (!this.git) {
+			new Notice("Not connected");
+			return;
+		}
+
+		try {
+			const diff = await this.git.diffCommit(commit);
+			const modal = new Modal(this.app);
+			modal.titleEl.setText(`Commit ${commit.slice(0, 7)}`);
+
+			modal.modalEl.addClasses(["remote-vault-sync", "flex", "flex-col", "max-h-[80vh]"]);
+			modal.contentEl.addClasses(["overflow-auto", "flex-1"]);
+
+			const emptyStatus = {staged: [], modified: [], untracked: [], deleted: []};
+			const root = createRoot(modal.contentEl);
+			root.render(createElement(DiffModal, {app: this.app, diff, status: emptyStatus}));
+			modal.onClose = () => root.unmount();
+			modal.open();
+		} catch (e) {
+			console.error("[remote-vault-sync] Commit diff failed:", e);
 			new Notice(`Failed to get diff: ${e instanceof Error ? e.message : String(e)}`);
 		}
 	}

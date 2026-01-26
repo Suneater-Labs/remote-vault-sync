@@ -127,6 +127,11 @@ export class Git {
     return exec(this.cwd, args);
   }
 
+  // Show what a specific commit changed
+  async diffCommit(commit: string): Promise<string> {
+    return exec(this.cwd, ["show", commit, "--format="]);
+  }
+
   async log(count = 10): Promise<Commit[]> {
     // Format: oid, tree, parents, author name/email/timestamp/tz, committer name/email/timestamp/tz, subject
     const format = "%H%x00%T%x00%P%x00%an%x00%ae%x00%at%x00%ai%x00%cn%x00%ce%x00%ct%x00%ci%x00%s%x00";

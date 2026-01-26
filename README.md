@@ -12,7 +12,7 @@ Back up and sync your vault to S3 with git-based version control.
     <td align="center"><img src="https://github.com/user-attachments/assets/d269f0e4-66d9-4d7e-93aa-c5065fd4f824" alt="Status bar sync indicator" /><br/><em>Status bar indicator</em></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="https://github.com/user-attachments/assets/a6c378b0-5f4b-421a-ae44-213883d75571" alt="View commit changes" /><br/><em>View commit changes</em></td>
+    <td colspan="2" align="center"><img src="https://github.com/user-attachments/assets/4b7eacec-d3d1-4635-8707-2bf0e2be9d81" alt="View commit changes" /><br/><em>View commit changes</em></td>
   </tr>
 </table>
 
